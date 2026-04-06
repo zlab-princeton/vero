@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+.venv/
+env/
+venv/
+set_paths.sh
+
+# ML artifacts
+wandb/
+checkpoints/
+*.ckpt
+*.safetensors
+*.bin
+*.pt
+
+# IDE
+.idea
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+slurm-*.out
+
+# Cache
+.cache/
+
+# Agents
+
+CLAUDE.md
+AGENTS.md

@@ -1,0 +1,27 @@
+task: "mmmu_pro_standard_reasoning"
+dataset_path: MMMU/MMMU_Pro
+dataset_name: "standard (10 options)"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mmmu_pro_doc_to_visual
+doc_to_text: !function utils.mmmu_pro_doc_to_text
+doc_to_target: "{{answer}}"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 0.6
+  do_sample: True
+# The return value of process_results will be used by metrics
+process_results: !function utils.mmmu_pro_process_results
+
+metric_list:
+  - metric: mmmu_acc
+    aggregation: !function utils.mmmu_pro_aggregate_results
+    higher_is_better: true
+
+metadata:
+  - version: 0.0
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

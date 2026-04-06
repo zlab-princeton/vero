@@ -1,0 +1,36 @@
+defaults:
+  - gspo_llmjudge_shared
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:REPO_ROOT}/verl/trainer/config
+
+data:
+  max_pixels: 13690000
+  max_prompt_length: 18432
+  max_response_length: 16384
+  filter_overlong_prompts: true
+  normalize_bbox_to_1000: true
+
+actor_rollout_ref:
+  model:
+    path: "Qwen/Qwen3.5-9B-nothinkchattemplate"
+    use_fused_kernels: true  # Avoid materializing full logits tensor
+  actor:
+    dtype: bfloat16  # GatedDeltaNet kernels require bf16
+    ppo_max_token_len_per_gpu: 34816
+  rollout:
+    dtype: bfloat16
+    enforce_eager: true  # Hybrid layers incompatible with CUDAGraphs
+    max_num_batched_tokens: 34816
+    log_prob_max_token_len_per_gpu: 34816
+  ref:
+    log_prob_max_token_len_per_gpu: 34816
+
+critic:
+  ppo_max_token_len_per_gpu: 34816
+  forward_max_token_len_per_gpu: 34816
+
+reward_model:
+  forward_max_token_len_per_gpu: 34816

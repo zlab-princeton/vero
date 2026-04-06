@@ -1,0 +1,6 @@
+include: mia_bench.yaml
+task: "mia_bench_reasoning"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 0.6
+  do_sample: True

@@ -1,0 +1,43 @@
+defaults:
+  - gspo_llmjudge_shared
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:REPO_ROOT}/verl/trainer/config
+
+data:
+  max_pixels: 9437184  # 3072 x 3072
+  max_prompt_length: 14336
+  max_response_length: 14336
+  filter_overlong_prompts: false
+  normalize_bbox_to_1000: false
+  trust_remote_code: true
+
+actor_rollout_ref:
+  model:
+    path: "qunwang13/Bee-8B-SFT-nothinkchattemplate"
+    trust_remote_code: true
+    override_config:
+      text_config:
+        _attn_implementation: flash_attention_2
+  actor:
+    dtype: bfloat16
+    ppo_max_token_len_per_gpu: 28672
+    fsdp_config:
+      model_dtype: bfloat16
+  rollout:
+    dtype: bfloat16
+    max_num_batched_tokens: 28672
+    log_prob_max_token_len_per_gpu: 28672
+  ref:
+    log_prob_max_token_len_per_gpu: 28672
+    fsdp_config:
+      model_dtype: bfloat16
+
+critic:
+  ppo_max_token_len_per_gpu: 28672
+  forward_max_token_len_per_gpu: 28672
+
+reward_model:
+  forward_max_token_len_per_gpu: 28672

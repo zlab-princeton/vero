@@ -1,0 +1,5 @@
+include: chartqa_pro_qwen3_zs.yaml
+task: "chartqa_pro_gpt5nano_zs"
+
+generation_kwargs:
+  max_new_tokens: 16384

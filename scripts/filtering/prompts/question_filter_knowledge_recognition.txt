@@ -1,0 +1,74 @@
+Given the image and the question, your task is to independently evaluate the following criteria and set each corresponding flag. A flag should be `"true"` when the issue is present (i.e., the item should be filtered on that criterion) and `"false"` otherwise. Provide one concise overall explanation in `"reason"` summarizing the main driver(s) for any `"true"` flags.
+
+Evaluation criteria:
+
+1. **Relevance Filter (`relevance_filter`)** — Is the image related to the question?
+
+   * Set `"true"` if the image does not depict what the question refers to, or the entities/attributes asked about are absent.
+   * Examples:
+
+     * Asking about a “dog” when no dog or dog-related content appears → `"true"`.
+     * Asking for the diameter of a circle when no circle is present → `"true"`.
+
+2. **Ambiguity/Vagueness Filter (`ambiguous_filter`)** — Is the question too vague, does not have one answer better than the rest, or not actually a question? Is the sample an ill-posed input (unclear target or task)?
+
+   * Set `"true"` for unclear referents (“this”, “that”), incomplete/elliptical prompts, or non-question content (e.g., raw lists/tables with no query).
+   * Examples:
+
+     * “What do you think about this?” (no clear referent) → `"true"`.
+     * A list of numbers with no interrogative → `"true"`.
+     * “What will happen next? Choices: A. person0 will find what he is looking for and then take a puff of his cigar. B. person4 will pull person0' s shirt up his arm and help put his other arm in too. C. The waiter will bring their bill and someone will pay it. D. person2 might spill what is in his diningtable8 onto person0 or person2 will spill it on the floor, make a mess and diningtable8 might break.” When the person is holding a cigar and opening a box so one answer is clearly better than others correct answer (B) → `"false"` (and other filters false).
+     * “Between person0, person4, and person3 who does not belong? Choices: A. No, person0, person4, and person3 do not know who person4 is. B. Yes diningtable9 organized the gathering. C. He does not. D. person4 does not belong.” Where person0 and person3 are students and person4 is a teacher, so D is clearly the best answer → `"false"` (and other filters false).
+     * “Why does person3 look uncomfortable? Choices: A. Because person2 and person0 are not talking to her. B. person1 is gossiping about her to person3. C. She doesn' t like person1 and he' s walking towards her. D. person3 is in the bathroom with her.” where the scene is from a well-known movie so the context of character relations can be clearly determined from external world knowledge → `"false"` (and other filters false).
+     * “Where is person0' s opponent? Choices: A. The guy on top tackled the bottom player. B. He looks like he is fighting with another person. C. He is in the ring. D. person12 is in his home workout room.” where the movie is clearly nacho libre and Jack Black is shown in the scene with his costume on in a stage arena so by deduction and world knowledge the opponent must be in the ring → `"false"` (and other filters false).
+
+3. **Language Filter (`language_filter`)** — Is the question not in English?
+
+   * Set `"true"` if any required reading/understanding is in a language other than English.
+
+4. **Verifiability / Single-Answer Filter (`verifiable_filter`)** — Can the question be answered with a verifiable answer, or does not have one answer clearly better than the others based on the visuals? Is it well-posed but underdetermined given the image?
+
+   * Set `"true"` if multiple plausible answers or multiple plausible choice options (if multiple choice) exist. Model may use external world knowledge to identify individuals or objects when possible; ambiguity is determined by real-world uniqueness, not image-grounded constraints.
+   * Only mark true if multiple answers exists in the image. Answer paraphrases do not count as multiple answers. Mark false if one answer exists that may have multiple words associated with it (e.g., answer clear from image but could be phrased as "cat", "feline", ...). Also please see Ambiguity Filter details which is related.
+   * Examples:
+
+     * Text/marks necessary to answer are illegible at given resolution → `"true"`.
+     * "Who is this?" with a clear picture of a man → `"false"`.
+     * “What is the label of the red line in the plot?” with multiple red lines present → `"true"`.
+     * "How much higher was the 2020 value compared to 2019?" where each data point is not explicitely labeled for a value → verifiable_filter: `"false"`, number_precision_filter: `"true"`.
+     * “This landmark is in what country?” clearly visible mountain range with clear features → `"false"`.
+     * “The orange item here is frequently pictured with what character?” and clearly is referring to the carrot so is veriably a bunny, bugs bunny, or rabbit. → `"false"`.
+     * “Which President's life does the resident here know several details about?” where there is clearly a book about bill clinton on the shelf. → `"false"`.
+     * “Which vehicle is experiencing problem?” where there is clearly a car stuck on the side of the road. → `"false"`.
+     * “In which country was the person in the picture born?” where the person is clearly visible and could be determined by common knowledge on the internet. → `"false"`.
+     * “What is the age difference between these two folks in picture?” where both individuals could be identified using the internet or world knowledge and age determined. → `"false"`.
+
+5. **Numeric Precision / Readability Filter (`number_precision_filter`)** — Does the question demand a numeric precision that the visual cannot unambiguously support?
+
+   * Set `"true"` if exact integers/decimals or derived metrics (e.g., average annual growth rate, percentage change) require precise values that are not explicitly labeled or legibly recoverable from the chart/axes/points.
+   * Even if the question uses approximation language ("about," "approximately," "nearest"), set "true" if the underlying precise value cannot be confidently determined.
+   * Things that can be visually estimated but may have slight ambiguity in numerical answer, mark "true".
+   * Examples:
+
+     * “What was the average annual growth rate of EV registrations in Asia between 2010 and 2020?” from an unlabeled line chart → `"true"`.
+     * “How much did 'cereal' increase from 2019 to 2020?” with legible numbers marked above data points for 2019 & 2020 → `"false"`.
+     * “What is the appoximate difference between the median values of 'Dark and Chocolate' and 'Blue Berry' data points?” when data points are not labeled and exact median is hard to obtain → `"true"`.
+
+
+Decision guidance:
+
+* Multiple flags may be `"true"` simultaneously.
+* If *any* of the above flags is `"true"`, the item is considered filtered for that dimension. Use `"reason"` to summarize the primary cause(s).
+
+**Output Format (json format)**:
+
+```json
+{
+  "relevance_filter": "true",
+  "ambiguous_filter": "false",
+  "language_filter": "false",
+  "verifiable_filter": "true",
+  "number_precision_filter": "true",
+  "reason": "Briefly explain the main reason(s) these filter(s) were triggered."
+}
+```

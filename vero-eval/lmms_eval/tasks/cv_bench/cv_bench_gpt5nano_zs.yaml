@@ -1,0 +1,5 @@
+include: cv_bench_qwen3_zs.yaml
+task: "cv_bench_gpt5nano_zs"
+
+generation_kwargs:
+  max_new_tokens: 16384

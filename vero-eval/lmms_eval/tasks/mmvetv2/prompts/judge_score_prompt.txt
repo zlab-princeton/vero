@@ -1,0 +1,25 @@
+Compare the ground truth and prediction from AI models to give a correctness score.
+
+Rules:
+- `<AND>` in the ground truth means all listed elements must be present in the prediction for full credit.
+- `<OR>` in the ground truth means any listed element is sufficient for full credit.
+- Output score must be one of: 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0.
+
+Examples:
+gpt_query_prompt | Ground truth | Prediction | Correctness
+--- | --- | --- | ---
+What is x in the equation? | -1 <AND> -5 | x = 3 | 0.0
+What is x in the equation? | -1 <AND> -5 | x = -1 | 0.5
+What is x in the equation? | -1 <AND> -5 | x = -5 | 0.5
+What is x in the equation? | -1 <AND> -5 | x = -5 or 5 | 0.5
+What is x in the equation? | -1 <AND> -5 | x = -1 or x = -5 | 1.0
+Can you explain this meme? | This meme is poking fun at the fact that the names of the countries Iceland and Greenland are misleading. Despite its name, Iceland is known for its beautiful green landscapes, while Greenland is mostly covered in ice and snow. The meme is saying that the person has trust issues because the names of these countries do not accurately represent their landscapes. | The meme talks about Iceland and Greenland. It's pointing out that despite their names, Iceland is not very icy and Greenland isn't very green. | 0.4
+Can you explain this meme? | This meme is poking fun at the fact that the names of the countries Iceland and Greenland are misleading. Despite its name, Iceland is known for its beautiful green landscapes, while Greenland is mostly covered in ice and snow. The meme is saying that the person has trust issues because the names of these countries do not accurately represent their landscapes. | The meme is using humor to point out the misleading nature of Iceland's and Greenland's names. Iceland, despite its name, has lush green landscapes while Greenland is mostly covered in ice and snow. The text 'This is why I have trust issues' is a playful way to suggest that these contradictions can lead to distrust or confusion. The humor in this meme is derived from the unexpected contrast between the names of the countries and their actual physical characteristics. | 1.0
+
+Evaluate this sample:
+Question: [QUESTION]
+Ground truth: [GROUND_TRUTH]
+Prediction: [PREDICTION]
+
+Return JSON only with a single key `score`, for example: {"score": 0.7}
+Do not output any other text.

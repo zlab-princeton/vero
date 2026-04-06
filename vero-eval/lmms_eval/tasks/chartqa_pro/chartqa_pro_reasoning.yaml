@@ -1,0 +1,25 @@
+dataset_path: ahmed-masry/ChartQAPro
+dataset_kwargs:
+  token: True
+task: "chartqa_pro_reasoning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.chartqa_pro_doc_to_visual
+doc_to_text: !function utils.chartqa_pro_doc_to_text_alt
+doc_to_target: "Answer"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 0.6
+  do_sample: True
+process_results: !function utils.chartqa_pro_process_results
+metric_list:
+  - metric: relaxed_overall
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+

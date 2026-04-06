@@ -1,0 +1,28 @@
+dataset_path: MathLLMs/MathVision
+dataset_kwargs:
+  token: True
+task: "mathvision_test_mimo_zs"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function mimo_utils.mathvision_doc_to_visual
+doc_to_text: !function mimo_utils.mimo_mathvision_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function mimo_utils.mimo_mathvision_boxed_process_results
+metric_list:
+  - metric: mathvision_standard_eval
+    aggregation: !function mimo_utils.mathvision_aggregate_results_eval
+    higher_is_better: true
+  - metric: math_verify
+    aggregation: !function mimo_utils.mimo_mathvision_math_verify_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_format: reasoning
+    mc_prompt: "Answer the question with the option's letter from the given choices. You must put the answer in \\boxed{}."
+    short_answer_prompt: "Answer the question with a number. You must put the answer in \\boxed{}."

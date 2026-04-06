@@ -1,0 +1,13 @@
+include: visual_probe_medium.yaml
+task: "visual_probe_medium_qwen3_thinking_zs"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You are given an image. Search the picture to answer the question. Respond with a short, specific phrase only. "
+    post_prompt: ""

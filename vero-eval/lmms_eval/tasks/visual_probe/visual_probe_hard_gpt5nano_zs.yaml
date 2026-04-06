@@ -1,0 +1,2 @@
+include: visual_probe_hard_qwen3_zs.yaml
+task: "visual_probe_hard_gpt5nano_zs"

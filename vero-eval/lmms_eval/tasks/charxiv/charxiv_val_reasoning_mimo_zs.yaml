@@ -1,0 +1,6 @@
+include: charxiv_val_reasoning.yaml
+task: "charxiv_val_reasoning_mimo_zs"
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0.0
+  do_sample: false

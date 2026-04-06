@@ -1,0 +1,26 @@
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.visual_probe_doc_to_visual
+doc_to_text: !function utils.visual_probe_doc_to_text
+doc_to_target: !function utils.visual_probe_doc_to_target
+process_results: !function utils.visual_probe_process_results
+
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: judge_accuracy
+    aggregation: !function utils.visual_probe_aggregate_judge_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You are given an image. Search the picture to answer the question. Respond with a short, specific phrase only. "
+    post_prompt: ""
+
+metadata:
+  version: 0.0

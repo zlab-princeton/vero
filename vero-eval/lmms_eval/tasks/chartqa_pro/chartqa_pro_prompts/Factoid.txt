@@ -1,0 +1,7 @@
+You are given a factoid question that you need to answer based on the provided image.
+
+Your answer should be a single word, number, or phrase. If the question is unanswerable based on the information in the provided image, your answer should be "unanswerable". Do not generate units. But if numerical units such as million, m, billion, B, or K are required, use the exact notation shown in the chart.
+
+If there are multiple final answers, put them in brackets using this format [’Answer1’, ’Answer2’].
+
+Question: <question>

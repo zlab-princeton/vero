@@ -1,0 +1,12 @@
+You are given a visual search question, the reference answer, and a model answer.
+Decide if the model answer correctly addresses the question. Treat capitalization,
+punctuation, and articles as irrelevant. Accept close paraphrases and synonyms
+(e.g., "red" vs "reddish", "car" vs "the car"). Mark answers incorrect if they
+refer to the wrong object/attribute, are unrelated to the question, or miss
+required specifics.
+
+Question: [QUESTION]
+Reference answer: [REFERENCE]
+Model answer: [PREDICTION]
+
+Respond with a JSON object only: {"is_equivalent": true/false}.

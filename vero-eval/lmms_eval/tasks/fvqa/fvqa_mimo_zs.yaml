@@ -1,0 +1,6 @@
+include: fvqa_qwen3_thinking_zs.yaml
+task: "fvqa_mimo_zs"
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0.0
+  do_sample: false

@@ -1,0 +1,53 @@
+defaults:
+  - gspo_llmjudge_shared
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:REPO_ROOT}/verl/trainer/config
+
+data:
+  max_pixels: 16777216  # 4096 x 4096
+  max_prompt_length: 18432
+  max_response_length: 18432
+  filter_overlong_prompts: false
+  normalize_bbox_to_1000: true
+  trust_remote_code: true
+
+actor_rollout_ref:
+  model:
+    path: "qunwang13/molmo2-8b"
+    trust_remote_code: true
+    override_config:
+      text_config:
+        _attn_implementation: flash_attention_2
+      vit_config:
+        _attn_implementation: sdpa
+        float32_attention: false
+      adapter_config:
+        _attn_implementation: sdpa
+        float32_attention: false
+  actor:
+    dtype: bfloat16
+    freeze_vision_tower: true
+    ppo_max_token_len_per_gpu: 36864  # 18432 + 18432
+    fsdp_config:
+      param_offload: true
+      optimizer_offload: true
+  rollout:
+    dtype: bfloat16
+    max_num_batched_tokens: 36864
+    log_prob_max_token_len_per_gpu: 36864
+  ref:
+    log_prob_max_token_len_per_gpu: 36864
+
+critic:
+  ppo_max_token_len_per_gpu: 36864
+  forward_max_token_len_per_gpu: 36864
+
+reward_model:
+  forward_max_token_len_per_gpu: 36864
+  reward_kwargs:
+    llm_judge_kwargs:
+      timeout: 300
+      max_concurrent_requests: 32

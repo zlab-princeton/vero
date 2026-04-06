@@ -1,0 +1,5 @@
+include: blink_qwen3_zs.yaml
+group: blink_gpt5nano_zs
+
+generation_kwargs:
+  max_new_tokens: 16384

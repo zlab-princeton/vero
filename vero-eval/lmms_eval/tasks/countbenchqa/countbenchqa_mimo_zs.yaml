@@ -1,0 +1,31 @@
+dataset_path: vikhyatk/CountBenchQA
+task: "countbenchqa_mimo_zs"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function mimo_utils.countbenchqa_doc_to_visual
+doc_to_text: !function mimo_utils.countbenchqa_doc_to_text
+doc_to_target: "number"
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function mimo_utils.countbenchqa_mimo_process_results
+
+filter_list:
+  - name: "flexible-extract"
+    filter:
+      - function: !function mimo_utils.BoxedFilter
+
+metric_list:
+  - metric: exact_match
+    aggregation: !function mimo_utils.countbenchqa_mimo_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: " Please count the objects by grounding. Put your answer in \\boxed{}."
+
+metadata:
+  version: 0.0

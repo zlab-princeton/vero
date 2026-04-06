@@ -1,0 +1,4 @@
+include: _default_template_yaml
+dataset_path: Mini-o3/VisualProbe_Medium
+task: "visual_probe_medium"
+tag: visual_search

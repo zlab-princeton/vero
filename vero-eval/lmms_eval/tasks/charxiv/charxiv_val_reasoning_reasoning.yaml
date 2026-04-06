@@ -1,0 +1,21 @@
+test_split: validation
+doc_to_messages: !function utils.charxiv_reasoning_doc_to_messages_cot
+doc_to_text: !function utils.charxiv_reasoning_doc_to_text_cot
+doc_to_target: "reasoning_a"
+include: _default_template_yaml
+task: charxiv_val_reasoning_reasoning
+process_results: !function utils.charxiv_reasoning_process_results
+metric_list:
+  - metric: reasoning_acc
+    aggregation: !function utils.charxiv_reasoning_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+generation_kwargs:
+  max_new_tokens: 16384
+
+
+  temperature: 0.6
+  do_sample: True

@@ -1,0 +1,6 @@
+group: mmmu_pro_reasoning_samplingq3
+task:
+  - mmmu_pro_vision_reasoning_samplingq3
+  - mmmu_pro_standard_reasoning_samplingq3
+metadata:
+  version: 0.0

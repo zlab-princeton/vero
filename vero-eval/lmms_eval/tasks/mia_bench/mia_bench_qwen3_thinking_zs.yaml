@@ -1,0 +1,9 @@
+include: mia_bench.yaml
+task: "mia_bench_qwen3_thinking_zs"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True

@@ -1,0 +1,16 @@
+group: screenspotpro_point_in_box
+include: _default_template_point_yaml
+task: "screenspotpro_point_in_box_qwen25_zs"
+test_split: train
+process_docs: !function utils_point.screenspot_point_process_docs_abs
+doc_to_text: !function utils_point.screenspot_point_doc_to_text_abs
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Provide the point for the command:"
+    post_prompt: " Output the point in a JSON array format: [{\"point_2d\": [x, y]}]. Use absolute pixel coordinates (origin at top-left). Return only the JSON array, nothing else."

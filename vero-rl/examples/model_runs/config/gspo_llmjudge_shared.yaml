@@ -1,0 +1,160 @@
+defaults:
+  - ppo_trainer
+  - _self_
+
+algorithm:
+  adv_estimator: grpo
+  use_kl_in_reward: false
+  kl_ctrl:
+    kl_coef: 0
+
+data:
+  train_files: "${oc.env:TRAIN_FILES,${oc.env:REPO_ROOT}/data/vero_600k_train.verl.jsonl}"
+  val_files: "${oc.env:VAL_FILES,${oc.env:REPO_ROOT}/data/vero_600k_val.verl.jsonl}"
+  image_root: "${oc.env:IMAGE_ROOT,${oc.env:REPO_ROOT}/data}"
+  system_prompt: "${oc.env:REPO_ROOT}/examples/prompts/system_prompt_chatting.txt"
+  filter_overlong_prompts_workers: 64
+  shuffle: true
+  train_batch_size: 256
+  val_batch_size: 512
+  max_prompt_length: 12288
+  max_response_length: 16384
+  max_pixels: 9437184
+  filter_overlong_prompts: true
+  truncation: error
+  image_key: images
+  prompt_key: prompt
+  normalize_bbox_to_1000: false
+  per_batch_domain_weights: "chart_ocr:0.16666666666666666,knowledge_recognition:0.16666666666666666,spatial_action:0.16666666666666666,counting_grounding_search:0.16666666666666666,stem:0.16666666666666666,visual_alignment:0.16666666666666666"
+
+actor_rollout_ref:
+  model:
+    use_remove_padding: true
+    enable_gradient_checkpointing: true
+
+  actor:
+    optim:
+      lr: 1e-6
+      lr_warmup_steps: 40
+    ppo_mini_batch_size: 128
+    use_dynamic_bsz: true
+    ppo_max_token_len_per_gpu: 28672
+    loss_agg_mode: seq-mean-token-mean
+    policy_loss:
+      loss_mode: gspo
+    use_kl_loss: false
+    kl_loss_coef: 0.0
+    kl_loss_type: low_var_kl
+    clip_ratio_low: 0.0003
+    clip_ratio_high: 0.0004
+    clip_ratio_c: 10.0
+    entropy_coeff: 0
+    strategy: fsdp2
+    freeze_vision_tower: false
+    dtype: float16
+    fsdp_config:
+      param_offload: false
+      optimizer_offload: false
+    ulysses_sequence_parallel_size: 1
+
+  rollout:
+    name: vllm
+    tensor_model_parallel_size: 1
+    disable_log_stats: false
+    dtype: float16
+    engine_kwargs:
+      vllm:
+        disable_mm_preprocessor_cache: true
+    gpu_memory_utilization: 0.7
+    enable_prefix_caching: true
+    max_num_batched_tokens: 8192
+    max_num_seqs: 1024
+    enable_chunked_prefill: true
+    enforce_eager: false
+    free_cache_engine: true
+    temperature: 1.0
+    top_p: 1.0
+    top_k: -1
+    n: 8
+    val_kwargs:
+      temperature: 0.7
+      top_p: 1.0
+      top_k: -1
+      do_sample: true
+      n: 1
+    log_prob_use_dynamic_bsz: true
+    log_prob_max_token_len_per_gpu: 28672
+
+  ref:
+    log_prob_use_dynamic_bsz: true
+    log_prob_max_token_len_per_gpu: 28672
+    fsdp_config:
+      param_offload: true
+    ulysses_sequence_parallel_size: 1
+
+reward_model:
+  reward_manager: vero_vllm_judge
+  use_dynamic_bsz: true
+  forward_max_token_len_per_gpu: 28672
+  reward_kwargs:
+    format_score: 0.2
+    llm_judge_kwargs:
+      base_url: "http://localhost:51001/v1"
+      api_key: "qwen"
+      model_name: "qwen_vllm"
+      port: 51001
+      prompt_path: "${oc.env:REPO_ROOT}/examples/prompts/llm_judge_reference.txt"
+      debug_output_dir: "${trainer.default_local_dir}/llm_judge_debug"
+      max_tokens: 1024
+      temperature: 0.7
+      top_p: 0.8
+      top_k: 20
+      min_p: 0
+      presence_penalty: 1.5
+      frequency_penalty: 1.0
+      score_scale: 0_to_1
+      enable_sleep_mode: true
+      sleep_level: 1
+      timeout: 150
+      max_concurrent_requests: 64
+      debug_enabled: false
+      debug_max_items: 9999999
+      debug_every: 1
+      log_outputs: true
+    overlong_buffer_cfg:
+      enable: true
+      len: 2048
+      penalty_factor: 1.0
+      log: false
+    max_resp_len: 16384
+    instruction_following_reward_weight: 0.5
+
+critic:
+  use_dynamic_bsz: true
+  ppo_max_token_len_per_gpu: 28672
+  forward_max_token_len_per_gpu: 28672
+  forward_micro_batch_size_per_gpu: 16
+  ulysses_sequence_parallel_size: 1
+
+trainer:
+  project_name: "verl"
+  experiment_name: "${oc.env:TRAINER_EXPERIMENT_NAME}"
+  n_gpus_per_node: 8
+  default_local_dir: "${oc.env:ROOT_PATH}/checkpoints/verl/${oc.env:TRAINER_EXPERIMENT_NAME}"
+  validation_data_dir: "${trainer.default_local_dir}/validation_data"
+  critic_warmup: 0
+  logger: ["console", "wandb"]
+  save_freq: 40
+  test_freq: 40
+  nnodes: 1
+  total_epochs: 20
+  total_training_steps: 4000
+  log_val_generations: 0
+  val_before_train: true
+  esi_redundant_time: 1500
+
+custom_reward_function:
+  name: compute_score_from_data_source
+  path: "${oc.env:REPO_ROOT}/vero_reward/math_verify_reward_type_boxed.py"
+  reward_kwargs:
+    format_score: 0.2

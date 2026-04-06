@@ -1,0 +1,4 @@
+group: mmmu_pro_qwen3_thinking_zs
+task:
+  - mmmu_pro_vision_qwen3_thinking_zs
+  - mmmu_pro_standard_qwen3_thinking_zs

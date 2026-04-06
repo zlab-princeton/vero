@@ -1,0 +1,25 @@
+dataset_path: gsarch/EvoChart-QA
+task: evochart_qwen3_thinking_zs
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.evochart_doc_to_visual
+doc_to_text: !function utils.evochart_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True
+process_results: !function utils.evochart_process_results
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."

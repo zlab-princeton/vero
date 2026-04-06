@@ -1,0 +1,97 @@
+Please evaluate whether the model’s answer is correct based on the given question, the standard answer, and the model’s predicted answer. Your task is to assign one of the following labels: **Correct**, **Incorrect**, or **Not Attempted**.
+
+First, we provide examples for each evaluation category. Then, you will evaluate the predicted answers for a new question.
+
+## Examples of **Correct** answers:
+
+```
+Question: What are the names of the children of the person in the image (Barack Obama)?
+Standard Answer: Malia Obama and Sasha Obama
+Model Prediction 1: Malia Obama and Sasha Obama
+Model Prediction 2: Malia and Sasha
+Model Prediction 3: Most people would say Malia and Sasha, but I am not sure and need to confirm
+Model Prediction 4: Barack Obama has two daughters, Malia Ann and Natasha Marian, commonly known as Malia Obama and Sasha Obama. Malia was born on July 4, 1998, and Sasha was born on June 10, 2001.
+```
+
+All of the above responses are **Correct**, because:
+
+* They fully include the key information from the standard answer.
+* They do not contain any information that contradicts the standard answer.
+* Only semantic content matters. Language, capitalization, punctuation, grammar, and order do not matter.
+* Vague statements or expressions of uncertainty are acceptable, as long as the standard answer is included and no incorrect or contradictory information is present.
+
+## Examples of **Incorrect** answers:
+
+```
+Question: What are the names of the children of the person in the image (Barack Obama)?
+Standard Answer: Malia Obama and Sasha Obama
+Model Prediction 1: Malia
+Model Prediction 2: Malia, Sasha, and Susan
+Model Prediction 3: Barack Obama has no children
+Model Prediction 4: I think it is Malia and Sasha. Or maybe Malia and Jackie. Or Joey and Malia.
+Model Prediction 5: Although I do not know their exact names, I can say Barack Obama has three children.
+Model Prediction 6: You might be referring to Betsy and Olivia. However, you should check the latest references to confirm. Is that the correct answer?
+```
+
+All of the above responses are **Incorrect**, because:
+
+* They contain factual statements that contradict the standard answer.
+* Even if the response includes hedging language such as “maybe” or “I am not sure”, it is still considered incorrect if it contains contradictory facts.
+
+## Examples of **Not Attempted** answers:
+
+```
+Question: What are the names of the children of the person in the image (Barack Obama)?
+Standard Answer: Malia Obama and Sasha Obama
+Model Prediction 1: I do not know.
+Model Prediction 2: I need more context about which Obama you are referring to.
+Model Prediction 3: I cannot answer this question without browsing the internet, but I know Barack Obama has two children.
+Model Prediction 4: Barack Obama has two children. I know one is named Malia, but I am not sure about the other.
+Model Prediction 5: I cannot identify the person in the image.
+Model Prediction 6: N/A.
+```
+
+All of the above responses are **Not Attempted**, because:
+
+* They do not include the key information from the standard answer.
+* They do not contain any statements that contradict the standard answer.
+
+Only return the letter “A”, “B”, or “C”. Do not add any other text.
+
+Additional notes:
+
+* For questions where the standard answer is a number, the predicted answer must match the standard answer.
+
+  * For example, for the question “What is the total length in meters of the Huangpu River Grand Bridge on the Jinshan Railway?”, with standard answer “3518.17”:
+
+    * Predicted answers “3518”, “3518.1”, and “3518.17” are **Correct**.
+    * Predicted answers “3520” and “3600” are **Incorrect**.
+    * Predicted answers such as “about 3500 meters” or “more than 3000 meters” are **Not Attempted**, because they neither confirm nor contradict the standard answer.
+* If the standard answer contains more information than the question asks for, the predicted answer only needs to include the information required by the question.
+
+  * For example, for the question “What is the main chemical component of magnesite?”, with standard answer “Magnesium carbonate (MgCO₃)”, both “magnesium carbonate” and “MgCO₃” are considered **Correct**.
+* If omitted information in the predicted answer can be clearly inferred from the question, the answer is still considered **Correct**.
+
+  * For example, for the question “The Nuragic site of Barumini was listed as a UNESCO World Heritage Site in 1997. In which region is it located?”, with standard answer “Sardinia, Italy”, the predicted answer “Sardinia” is **Correct**.
+* Different translations or transliterations of the same name are considered **Correct**.
+
+  * For example, if the standard answer is “Robinson”, then “Luobin Xun” or “Lubinson” are both **Correct**.
+* If the predicted answer and the standard answer refer to the same entity using different names, such as “Temple of Heaven” and “Hall of Prayer for Good Harvests”, the answer is considered **Correct**.
+
+## Below is a new example. For each predicted answer, reply with only one of “Correct”, “Incorrect”, or “Not Attempted”. Do not apologize or correct yourself. Only evaluate the answer.
+
+```
+Question: {question}
+Correct Answer: {answer}
+Predicted Answer: {candidates}
+```
+
+Please strictly follow the format below and return a dictionary in JSON format. Do not replace the top-level keys with actual answers. Do not return any other content.
+
+```
+{
+    "Predicted Answer 0": "Overall judgment. Only return one of 'Correct', 'Incorrect', or 'Not Attempted'. Do not add any other text.",
+    "Predicted Answer 1": "Overall judgment. Only return one of 'Correct', 'Incorrect', or 'Not Attempted'. Do not add any other text.",
+    ...
+}
+```

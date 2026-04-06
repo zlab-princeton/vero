@@ -1,0 +1,407 @@
+Your task is given a question and answer regarding an image (image not provided), normalize every ground truth answer so it reduces to either a single numeric value a single multiple-choice letter. Strip units, currency symbols, percent signs, sentence wrappers, and convert MC option text to its canonical letter. Filter out any ground truth that represents multi-value answers, symbolic-form answers, ambiguous text labels, and unsupported scientific notation.
+
+# One-Sentence Summary
+
+**Keep only tasks whose correct answer reduces to a single numeric value, a single MC letter, or an exact string-match label; normalize units, currency, percents, MC formats, fractions, and sentence-embedded numbers; and filter out multi-value answers, symbolic-form answers, ambiguous text labels, and unsupported scientific notation.**
+
+# Final Specification for Ground-Truth Filtering and Normalization
+
+## 1. **Filter Out Entirely**
+
+Exclude these samples from RL training.
+
+### 1.1 Multi-value answers
+
+* Lists, sets, tuples, unordered or ordered multi-element answers
+  Examples:
+
+  * `{2,-3}`, `(1,2,3)`, `[radio, television, newspaper]`, `"2, 3, 5"`
+
+### 1.2 Symbolic expressions without a single numeric target
+
+* Expressions where multiple algebraic forms are valid and cannot be canonically reduced
+
+  * `2(x+3)`
+  * `\sqrt{4}`
+  * Trig identities, complicated polynomial rearrangements
+
+### 1.3 Scientific notation with positive exponents
+
+* `"3.2e5"` (unless you normalize it yourself first)
+
+### 1.4 Ambiguous textual answers
+
+* Answers where the correct label cannot be reliably determined via exact or case-insensitive string match
+
+  * Example: explanations, long sentences, multi-word descriptions with synonyms
+  * Anything requiring semantic matching instead of exact or very-close string matching
+
+---
+
+## 2. **Keep, but Normalize (Reformat) Before Training**
+
+These answers are allowed but must be canonicalized.
+
+### 2.1 Multiple Choice → **canonical uppercase letter**
+
+Normalize all MC ground truth to a single letter:
+
+* `"A red car"` → `A`
+* `"A) red car"` → `A`
+* `"(B) blue house"` → `B`
+* `"Choice (C): green tree"` → `C`
+* `"I choose the blue house."` → `C` *only if mapping is known*
+
+Rule:
+**Ground truth for MC must be a single letter `A`–`Z` after normalization.**
+
+### 2.2 Percent → decimal
+
+* `"45%"` → `0.45`
+* `"31.74%"` → `0.3174`
+
+### 2.3 Units → number
+
+Strip units completely:
+
+* `"80 cm^2"` → `80`
+* `"57.6 cubic inches per second"` → `57.6`
+* `"80 square centimeters"` → `80`
+
+### 2.4 Currency → number
+
+Remove currency symbols, commas, spaces:
+
+* `"$1,234.50"` → `1234.5`
+* `"€0.75"` → `0.75`
+
+### 2.5 Sentence answers → extract the numeric answer
+
+* `"The answer is 42."` → `42`
+* `"Area is 57.6 square units"` → `57.6`
+
+### 2.6 Arithmetic, fractions, LaTeX fractions → reduce to a numeric value
+
+* `"1/2 + 1/3"` → `5/6`
+* `"\frac{1}{2}"` → `0.5`
+* `"3^2 + 4^2"` → `25`
+
+### 2.7 Scientific notation (negative exponent only)
+
+* `"1.2e-3"` → `0.0012`
+
+---
+
+## 3. **Keep As-Is (No Reformat Needed)**
+
+These ground truths are safe without modification.
+
+### 3.1 Single numeric values
+
+* `42`, `3.14`, `0.75`, `0.5000`
+* `"1,000,000"` (optionally normalize)
+
+### 3.2 Expressions that canonically represent a single number
+
+* `"1 + 2 + 3"`
+* `"2*(3+4)"`
+* `"x^2 + 2x + 1"` (if this exact form is the expected canonical answer)
+
+### 3.3 LaTeX fractions
+
+* `\(\frac{1}{2}\)`
+  Evaluates to a single number.
+
+### 3.4 **Exact or near-exact string-match labels (non-numeric)**
+
+Allowed **only if** correctness can be judged by literal string equality (case-insensitive) after trimming.
+
+Examples:
+
+* `"True"` vs `"TRUE"`
+* `"cat"` vs `"Cat"`
+* `"red car"` vs `"Red Car"`
+
+Not allowed:
+
+* Synonyms, paraphrases, long descriptions
+* Cases needing semantic comparison
+* Cases where multiple wordings could be “equivalent” but do not match exactly
+
+Rule:
+**Accept nonnumeric labels only when exact string equivalence is the correctness criterion.**
+
+---
+
+# JSON Output Instructions (Per Sample)
+
+Each sample should be converted into a JSON object:
+
+```
+{
+  "keep": true/false,
+  "reason": "<string>",
+  "normalized_ground_truth": "<string or null>",
+  "type": "<numeric | mc | string | null>"
+}
+```
+
+Fields:
+
+* `"keep"`: whether this sample is suitable for RL training
+* `"reason"`: concise explanation of keeping or filtering
+* `"normalized_ground_truth"`: canonical answer if keep=true; otherwise null
+* `"type"`: `"numeric"`, `"mc"`, or `"string"` when keep=true; otherwise null
+
+---
+
+# Decision Rules
+
+Apply these rules to every sample, using both the **question** and the **ground-truth answer**.
+
+---
+
+## 1. Filter Out Entirely (keep=false)
+
+Reject samples whose ground-truth answer fits any of these categories:
+
+### 1.1 Multi-value answers
+
+Lists, tuples, sets, or any answer containing multiple values.
+
+### 1.2 Non-canonical symbolic expressions
+
+Symbolic expressions not guaranteed to reduce to a single numeric value.
+
+### 1.3 Ambiguous textual labels
+
+Free-text answers whose correctness requires semantic interpretation (synonyms, paraphrases, multi-word descriptions not guaranteed to match exactly).
+
+### 1.4 Unsupported scientific notation
+
+Positive exponents such as `"3.2e5"` unless pre-normalized.
+
+If filtered:
+
+```
+"keep": false,
+"normalized_ground_truth": null,
+"type": null
+```
+
+---
+
+## 2. Normalize If Keepable (keep=true)
+
+If not filtered out, normalize:
+
+### 2.1 Multiple Choice → single uppercase letter
+
+Normalize any MC-style ground truth to `"A"`, `"B"`, `"C"`, etc.
+
+### 2.2 Numeric ground truths
+
+Normalize using:
+
+* Unit stripping
+* Percent conversion → decimal
+* Currency stripping
+* Thousand-separator cleanup
+* Sentence extraction
+* Fraction/expression evaluation
+* Negative scientific-notation conversion
+
+### 2.3 String-match labels
+
+Allowed **only** when correctness is literal (case-insensitive) string match.
+
+---
+
+# JSON Examples (With Questions)
+
+Below are concrete examples showing how questions interact with the rules.
+
+---
+
+## Example 1 — Numeric with units
+
+**Question:**
+*"What is the area in square centimeters?"*
+
+**Ground truth:** `"57.6 cm^2"`
+
+```
+{
+  "keep": true,
+  "reason": "unit_stripped_numeric",
+  "normalized_ground_truth": "57.6",
+  "type": "numeric"
+}
+```
+
+---
+
+## Example 2 — Numeric buried in sentence
+
+**Question:**
+*"Compute the value of the expression."*
+
+**Ground truth:** `"The answer is 42."`
+
+```
+{
+  "keep": true,
+  "reason": "numeric_extracted_from_sentence",
+  "normalized_ground_truth": "42",
+  "type": "numeric"
+}
+```
+
+---
+
+## Example 3 — Percent normalization
+
+**Question:**
+*"What is the probability as a decimal?"*
+
+**Ground truth:** `"31.74%"`
+
+```
+{
+  "keep": true,
+  "reason": "percent_converted_to_decimal",
+  "normalized_ground_truth": "0.3174",
+  "type": "numeric"
+}
+```
+
+---
+
+## Example 4 — Multiple choice (letter + text)
+
+**Question:**
+*"Which option is correct? A) The red car; B) The white shirt"*
+
+**Ground truth:** `"A) The red car"`
+
+```
+{
+  "keep": true,
+  "reason": "mc_letter_normalized",
+  "normalized_ground_truth": "A",
+  "type": "mc"
+}
+```
+
+---
+
+## Example 5 — Exact string-match label
+
+**Question:**
+*"What color is shown in the image?"*
+
+**Ground truth:** `"Blue"`
+
+```
+{
+  "keep": true,
+  "reason": "string_exact_match",
+  "normalized_ground_truth": "blue",
+  "type": "string"
+}
+```
+
+---
+
+## Example 6 — Multi-value answer (filter out)
+
+**Question:**
+*"What are the roots of the equation?"*
+
+**Ground truth:** `"{2, -3}"`
+
+```
+{
+  "keep": false,
+  "reason": "multi_value_answer",
+  "normalized_ground_truth": null,
+  "type": null
+}
+```
+
+---
+
+## Example 7 — Symbolic, not reducible to one numeric value (filter out)
+
+**Question:**
+*"Simplify the expression."*
+
+**Ground truth:** `"2(x+3)"`
+
+```
+{
+  "keep": false,
+  "reason": "symbolic_non_numeric",
+  "normalized_ground_truth": null,
+  "type": null
+}
+```
+
+---
+
+## Example 8 — Ambiguous textual description (filter out)
+
+**Question:**
+*"What object does the model describe?"*
+
+**Ground truth:** `"a fast red vehicle"`
+
+```
+{
+  "keep": false,
+  "reason": "ambiguous_text_label_requires_semantic_match",
+  "normalized_ground_truth": null,
+  "type": null
+}
+```
+
+---
+
+## Example 9 — Supported scientific notation (negative exponent)
+
+**Question:**
+*"Provide the value in decimal form."*
+
+**Ground truth:** `"1.2e-3"`
+
+```
+{
+  "keep": true,
+  "reason": "scientific_notation_negative_converted",
+  "normalized_ground_truth": "0.0012",
+  "type": "numeric"
+}
+```
+
+---
+
+## Example 10 — Unsupported scientific notation (filter out)
+
+**Question:**
+*"Compute the magnitude."*
+
+**Ground truth:** `"3.2e5"`
+
+```
+{
+  "keep": false,
+  "reason": "unsupported_scientific_notation_positive_exponent",
+  "normalized_ground_truth": null,
+  "type": null
+}
+```
+
+Your turn:
+
+Question: {QUESTION}
+Ground truth: {GROUND_TRUTH}

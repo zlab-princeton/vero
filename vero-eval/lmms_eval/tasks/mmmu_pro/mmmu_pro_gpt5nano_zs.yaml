@@ -1,0 +1,4 @@
+group: mmmu_pro_gpt5nano_zs
+task:
+  - mmmu_pro_vision_gpt5nano_zs
+  - mmmu_pro_standard_gpt5nano_zs

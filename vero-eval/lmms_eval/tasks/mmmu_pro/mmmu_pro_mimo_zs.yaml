@@ -1,0 +1,4 @@
+group: mmmu_pro_mimo_zs
+task:
+  - mmmu_pro_vision_mimo_zs
+  - mmmu_pro_standard_mimo_zs

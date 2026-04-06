@@ -1,0 +1,6 @@
+include: mia_bench.yaml
+task: "mia_bench_qwen25_zs"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: False

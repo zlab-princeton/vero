@@ -1,0 +1,3 @@
+group: charxiv_qwen25_zs
+task:
+  - charxiv_val_reasoning_qwen25_zs

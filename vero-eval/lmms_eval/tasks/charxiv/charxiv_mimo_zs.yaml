@@ -1,0 +1,3 @@
+group: charxiv_mimo_zs
+task:
+  - charxiv_val_reasoning_mimo_zs

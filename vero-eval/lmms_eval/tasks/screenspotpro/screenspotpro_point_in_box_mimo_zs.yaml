@@ -1,0 +1,14 @@
+group: screenspotpro_point_in_box
+include: _default_template_point_yaml
+task: "screenspotpro_point_in_box_mimo_zs"
+test_split: train
+process_docs: !function utils_point.screenspot_point_process_docs_rel1000
+doc_to_text: !function utils_point.screenspot_point_doc_to_text_rel1000
+process_results: !function utils_point.screenspot_point_process_result
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ' Output the click location as a JSON array: [{"point_2d": [x, y]}]. Use coordinates scaled to 1000 (range 0-1000, where (0,0) is the top-left and (1000,1000) is the bottom-right). Return only the JSON, nothing else.'
+
+generation_kwargs:
+  max_new_tokens: 32768

@@ -1,0 +1,6 @@
+dataset_path: gsarch/SimpleVQA-EN
+dataset_name: "default"
+task: "simplevqa_en"
+test_split: test
+include: _default_template_yaml
+

@@ -1,0 +1,7 @@
+You are given a question along with different possible answers. You need to select the correct answer from them based on the provided image.
+
+Your answer should be one of the options letters only: a, b, c or d. If the question is unanswerable based on the information in the provided image, your answer should be "unanswerable".
+
+If there are multiple answers, put them in brackets using this format [’Answer1’, ’Answer2’].
+
+Question: <question>

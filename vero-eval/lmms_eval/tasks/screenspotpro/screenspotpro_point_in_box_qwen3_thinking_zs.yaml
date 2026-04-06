@@ -1,0 +1,16 @@
+group: screenspotpro_point_in_box
+include: _default_template_point_yaml
+task: "screenspotpro_point_in_box_qwen3_thinking_zs"
+test_split: train
+process_docs: !function utils_point.screenspot_point_process_docs_rel1000
+doc_to_text: !function utils_point.screenspot_point_doc_to_text_qwen3_tool
+process_results: !function utils_point.screenspot_point_process_result_qwen3_thinking
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True

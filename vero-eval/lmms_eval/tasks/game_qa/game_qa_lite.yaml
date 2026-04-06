@@ -1,0 +1,5 @@
+dataset_path: gsarch/Game-QA-Lite
+dataset_name: "default"
+task: "game_qa_lite"
+test_split: train
+include: _default_template_yaml

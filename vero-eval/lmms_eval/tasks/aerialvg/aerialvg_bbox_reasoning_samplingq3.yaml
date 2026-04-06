@@ -1,0 +1,40 @@
+dataset_path: IPEC-COMMUNITY/AerialVG
+task: "aerialvg_bbox_reasoning_samplingq3"
+process_docs: !function utils.aerialvg_process_docs_rel1000
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.aerialvg_doc_to_visual
+doc_to_text: !function utils.aerialvg_doc_to_text_rel1000
+doc_to_target: !function utils.aerialvg_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 16384
+
+
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True
+
+
+# The return value of process_results will be used by metrics
+process_results: !function utils.aerialvg_process_results
+# Note that the metric name can be either a registered metric function or a key returned by process_results
+metric_list:
+  - metric: aerialvg_iou
+    aggregation: !function utils.aerialvg_mean
+    higher_is_better: true
+  - metric: aerialvg_acc@0.5
+    aggregation: !function utils.aerialvg_mean
+    higher_is_better: true
+  - metric: aerialvg_acc@0.75
+    aggregation: !function utils.aerialvg_mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ' Output the bounding box(es) in a JSON array format: [{"bbox_2d": [x_min, y_min, x_max, y_max], "label": "<class name>"}]. For a single object, return one array element; for multiple objects, return one element per object in the array.'
+metadata:
+  version: 0.0

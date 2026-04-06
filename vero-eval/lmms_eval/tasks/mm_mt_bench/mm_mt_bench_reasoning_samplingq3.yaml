@@ -1,0 +1,9 @@
+include: mm_mt_bench.yaml
+task: "mm_mt_bench_reasoning_samplingq3"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True

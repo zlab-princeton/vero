@@ -1,0 +1,7 @@
+include: mathvista_testmini_qwen3_zs.yaml
+task: "mathvista_testmini_gpt5nano_zs"
+process_results: !function utils.mathvista_process_results_judge
+metric_list:
+  - metric: submission
+    aggregation: !function utils.mathvista_aggregate_results
+    higher_is_better: true

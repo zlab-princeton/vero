@@ -1,0 +1,2 @@
+include: mmmu_pro_vision_qwen3_zs.yaml
+task: "mmmu_pro_vision_gpt5nano_zs"

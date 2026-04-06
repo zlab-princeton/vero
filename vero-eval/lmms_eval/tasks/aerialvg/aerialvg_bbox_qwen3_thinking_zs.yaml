@@ -1,0 +1,22 @@
+include: aerialvg_bbox.yaml
+task: "aerialvg_bbox_qwen3_thinking_zs"
+process_docs: !function utils.aerialvg_process_docs_rel1000
+doc_to_text: !function utils.aerialvg_doc_to_text_rel1000
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True
+filter_list:
+  - name: "final-json"
+    filter:
+      - function: !function utils.BboxJsonFilter
+        regex_pattern: '(?s)</think>.*?(\[\s*\{[\s\S]*?"bbox_2d"[\s\S]*?\}\s*\])|(\[\s*\{[\s\S]*?"bbox_2d"[\s\S]*?\}\s*\])'
+        group_select: -1
+        fallback: "[invalid]"
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ' Return only one JSON array with a single object: [{"bbox_2d": [x_min, y_min, x_max, y_max], "label": "<class name>"}]. Use coordinates scaled to 1000 (range 0-1000) relative to the image (origin at top-left; x_min,y_min upper-left, x_max,y_max lower-right).'

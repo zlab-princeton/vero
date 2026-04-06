@@ -1,0 +1,10 @@
+include: aerialvg_bbox.yaml
+task: "aerialvg_bbox_qwen25_zs"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ' Return only one JSON array with a single object: [{"bbox_2d": [x_min, y_min, x_max, y_max], "label": "<class name>"}]. Use absolute pixel coordinates (origin at top-left; x_min,y_min upper-left, x_max,y_max lower-right). Provide exactly one box with no extra text.'

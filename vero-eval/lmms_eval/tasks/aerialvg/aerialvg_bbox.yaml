@@ -1,0 +1,37 @@
+dataset_path: IPEC-COMMUNITY/AerialVG
+task: "aerialvg_bbox"
+process_docs: !function utils.aerialvg_process_docs
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.aerialvg_doc_to_visual
+doc_to_text: !function utils.aerialvg_doc_to_text
+doc_to_target: !function utils.aerialvg_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+# The return value of process_results will be used by metrics
+process_results: !function utils.aerialvg_process_results
+# Note that the metric name can be either a registered metric function or a key returned by process_results
+metric_list:
+  - metric: aerialvg_iou
+    aggregation: !function utils.aerialvg_mean
+    higher_is_better: true
+  - metric: aerialvg_acc@0.5
+    aggregation: !function utils.aerialvg_mean
+    higher_is_better: true
+  - metric: aerialvg_acc@0.75
+    aggregation: !function utils.aerialvg_mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ' Return only one JSON array with a single object: [{"bbox_2d": [x_min, y_min, x_max, y_max], "label": "<class name>"}]. Use absolute pixel coordinates (origin at top-left; x_min,y_min upper-left, x_max,y_max lower-right). Provide exactly one box with no extra text.'
+
+metadata:
+  version: 0.0

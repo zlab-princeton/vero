@@ -1,0 +1,10 @@
+include: visual_probe_easy.yaml
+task: "visual_probe_easy_qwen25_zs"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You are given an image. Search the picture to answer the question. Respond with a short, specific phrase only. "
+    post_prompt: ""

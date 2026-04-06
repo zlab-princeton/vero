@@ -1,0 +1,29 @@
+dataset_path: lmms-lab/RealWorldQA
+dataset_kwargs:
+  token: True
+task: "realworldqa_reasoning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.realworldqa_doc_to_visual
+doc_to_text: !function utils.realworldqa_doc_to_text_removepost
+doc_to_target: "answer"
+process_results: !function utils.realworldqa_process_results
+
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 0.6
+  do_sample: True
+
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+      
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0

@@ -1,0 +1,2 @@
+include: game_qa_lite_qwen3_zs.yaml
+task: "game_qa_lite_gpt5nano_zs"

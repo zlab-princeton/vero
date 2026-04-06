@@ -1,0 +1,80 @@
+Given the image and the question, your task is to independently evaluate the following criteria and set each corresponding flag. A flag should be `"true"` when the issue is present (i.e., the item should be filtered on that criterion) and `"false"` otherwise. Provide one concise overall explanation in `"reason"` summarizing the main driver(s) for any `"true"` flags. It is totally fine if there is no `"true"` flag for any of the criteria.
+
+Evaluation criteria:
+
+1. **Relevance Filter (`relevance_filter`)** — Is the image related to the question?
+
+   * Set `"true"` if the image does not depict what the question refers to, or the entities/attributes asked about are absent.
+   * Set `"false"` if the equations is related to counting, and there is no such entity in the image. This just means the answer is 0, and there is no relevance flag needed to be set.
+
+   * Examples:
+
+     * Asking about a “dog” when no dog or dog-related content appears → `"true"`.
+     * Asking for the diameter of a circle when no circle is present → `"true"`.
+
+2. **Ambiguity/Vagueness Filter (`ambiguous_filter`)** — Is the question too vague, unclear, or not actually a question?
+
+   * Set `"true"` for unclear referents (“this”, “that”), incomplete/elliptical prompts, or non-question content (e.g., raw lists/tables with no query).
+   * If a question is asking for a bounding box and the question appears redundant, it cannot be marked as `"true"` solely for that reason. 
+
+   * Examples:
+
+     * “What do you think about this?” (no clear referent) → `"true"`.
+     * A list of numbers with no interrogative → `"true"`.
+
+3. **Language Filter (`language_filter`)** — Is the question not in English?
+
+   * Set `"true"` if any required reading/understanding is in a language other than English.
+
+4. **Verifiability / Single-Answer Filter (`verifiable_filter`)** — Can the question be answered with a single, objectively verifiable answer from visible content in the image? If the question is related to counting, and you can do a series of hypothetical operations to count the entities, then the flag should be `"false"`.
+
+   * Set `"true"` if the answer would require external knowledge, speculation, non-visible attributes, predictions/counterfactuals, or if multiple plausible answers exist from the same visual evidence.
+   * Set `"false"` if the question is can be verified by following the instructions in the question. For a question that related to hypothetical count, it is possible to verify the answer by following the instructions in the question. Thus the flag should be `"false"`. 
+
+   * Examples:
+
+     * “Who took this photo?”; “What brand is the car?” (no visible logo/text) → `"true"`.
+     * “What will happen next?”; “Where is this?” with no unique landmark → `"true"`.
+     * Text/marks necessary to answer are illegible at given resolution → `"true"`.
+     * “What is the label of the red line in the plot?” with multiple red lines present → `"true"`.
+     * “What is the exact color of the 'Animal' line in the plot?” when its precise color may have multiple correct names → `"true"`.
+     * "How much higher was the 2020 value compared to 2019?" where each data point is not explicitely labeled for a value → verifiable_filter: `"false"`, number_precision_filter: `"true"`.
+     * By following the sequence of instructions in the question, it is possible to verify the answer.
+     * The question might be hard, but it is possible to look closely at the image, and the answer is possible to verify. -> `"false"`.
+     * The question is related to counting, and there is no entity A in the image. Then the answer for this question should be 0. There is no ambiguity about the answer, so the flag should be `"false"`.
+     * The question is related to counting, and you need to perform some operations to count the entities. If following the instructions in the question, it is possible to verify the answer, then the flag should be `"false"`.
+
+5. **Numeric Readability Filter (`number_readability_filter`)** — Does the question demand a numeric number that the visual cannot support? when the scene prevents an objectively verifiable count, such as when it is impossible to distinguish discrete individuals due to heavy occlusion or ambiguous partial visibility, then the flag should be `"true"`. If the questions is related to counting, and is asking you how many entities are in the image, and there is no entity A in the image. For this tricky question, the answer should be 0. There is no ambiguity about this answer, so the flag should be `"false"`. **You do not need to care about the intention of the question, and you do not need to think outside of the image. There is no ambiguity for an answer of 0.**  Use this flag cautiously.
+
+   * Set `"true"` if the question demands a number of entities that cannot be determined from the visual.
+   * Set `"true"` if the question asks you to count or locate so many entities (usually more than 15) that giving an exact answer would be impractical or likely to cause confusion. If the number or location can still be determined accurately, even with a large number of entities, set it to `"false"`.
+   * Set `"false"` if the question demands a count of entities that can be determined from the visual. There may be tricky cases such that there is no entity A in the image, in this case the answer is 0, and there should not be ambiguity about the answer. If it is clear that something doesn't exist, then when someone asks how many xxx are in the image, the answer should be 0. You don't need to care about the intention of the question, and you don't need to think outside of the image. If there is no entity A in the image, and the answer is 0, then it is to be `"false"`. In this case, it is both verifiable and number_readability_filter: `"false"`.
+   * Set `"false"` if you can see the counts is 0, and you don't need to care about the intention of the question, and you don't need to think outside of the image.
+   * Set `"false"` if the question is hard, and you need to zoom in to the image to count the entities. You might not be able to see the answer directly, but it does not mean the question is needed to be filtered.
+
+    * Examples:
+
+     * “How many people are in the image?” when individuals are partially obscured, out of focus, or only partially visible in the image, making a precise, objectively verifiable count impossible from the visual content alone. → `"true"`.
+     * “How many xxx are in the image?” when the visual together with the questions is ambiguous such that multiple plausible counts are possible → `"true"`.
+      * “How many people are in the image?” when the number of people is legibly recoverable from the visual → `"false"`.
+      * “How many apples are in the image?” when there is clearly no apple in the image and the answer has not other ambiguity related to counting, this is false and you don't care about the intention of the question, there is no contradiciton, because the answer will just be 0. → `"false"`.
+      * “How many bottles are in the image?” when the question is very hard, and you need to zoom in to the image to count the entities → `"false"`.
+      * “How many bananas are in the image?” There is no banana in the image, and the answer is 0, then it is to be `"false"`, and there is no ambiguity about the answer.
+
+Decision guidance:
+
+* Multiple flags may be `"true"` simultaneously.
+* If *any* of the above flags is `"true"`, the item is considered filtered for that dimension. Use `"reason"` to summarize the primary cause(s).
+
+**Output Format (json format)**:
+
+```json
+{
+  "relevance_filter": "false",
+  "ambiguous_filter": "false",
+  "language_filter": "false",
+  "verifiable_filter": "false",
+  "number_readability_filter": "false",
+  "reason": "Briefly explain the main reason(s) these filter(s) were triggered."
+}
+```

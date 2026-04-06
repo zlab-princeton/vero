@@ -1,0 +1,580 @@
+Your task: given a QUESTION and a GROUND_TRUTH answer for an image (image not provided), decide whether the sample should be kept for RL training and, if kept, normalize the ground truth into a canonical form that can be evaluated reliably by simple matching.
+
+You must output exactly one JSON object per sample with fields:
+{
+"keep": true/false,
+"reason": "<string>",
+"normalized_ground_truth": "<string | number | array[string] | json[bbox] | null>",
+"type": "<numeric | mc | string_match_single | string_match_list | clicking | null>"
+}
+
+Key goal: keep only samples whose correct answer can be made reliably checkable as:
+
+1. a single numeric value, OR
+2. a single multiple-choice letter A–Z, OR
+3. an exact-match string label (case-insensitive after trimming), OR
+4. an exact-match against one of a list of acceptable strings (string_match_list), OR
+5. a bounding box when asked for a point prediction (clicking).
+
+Do not rely on semantic similarity at evaluation time. All correctness must be reducible to direct matching against the normalized output.
+
+# A. Decision framework
+
+You must classify each sample into one of two answer-space categories based on the QUESTION:
+
+## A1. Closed answer space (be strict)
+
+Questions whose correct answer comes from a small, well-defined ontology.
+
+Typical closed-space triggers (examples, not exhaustive):
+
+* Country / nationality / origin: “which country”, “what country”, “from which country”
+* Colors / patterns: “what color/colour”, “what color is the …”
+* Yes/No or True/False questions
+* Counts / numbers / measurements / prices / dates / times / probabilities
+* Explicit multiple-choice questions
+
+Closed-space KEEP rule (two conditions, both required):
+
+1. After normalization and pruning, the ground truth reduces to <= 3 canonical items, AND
+2. Those items are mutually consistent, meaning they are:
+
+   * spelling variants, formatting variants, or near-synonyms for the same target, OR
+   * explicitly allowed multiple answers per the question wording (e.g., “name two colors”).
+
+If the items are mutually exclusive alternatives (e.g., different countries, different colors) and the question does not explicitly allow multiple answers, then keep=false even if there are only 2–3 items.
+
+Rationale: allowing multiple competing answers in closed spaces destroys the training signal.
+
+## A2. Open answer space (be permissive)
+
+Questions whose correct answer may have many valid names or paraphrases, and where a longer accepted list is appropriate.
+
+Typical open-space triggers:
+
+* “What is this object called?”
+* “What appliance/tool is being used?”
+* “What is the purpose of …?”
+* “What is the person trying to do?” (actions/intents)
+* “What is this thing?” (common nouns)
+
+Open-space KEEP rule:
+
+* You may keep a long accepted list, up to 200 strings after normalization and pruning, as long as the list is internally consistent (see Section D).
+
+# B. Normalization targets and output type
+
+## B1. Multiple-choice (type="mc")
+
+If the question is multiple-choice OR the ground truth is in multiple-choice form:
+
+* Normalize to a single uppercase letter "A"–"Z".
+* Accept letter formats: "A", "A)", "(A)", "Choice A", "Option A", etc.
+
+Output:
+
+* normalized_ground_truth: "A" (string)
+* type: "mc"
+
+## B2. Numeric (type="numeric")
+
+Keep only if the correct answer can be reduced to one numeric value.
+
+Normalize numeric ground truth by applying all that are relevant:
+
+* Strip units completely (cm^2, inches/sec, “square centimeters”, etc.)
+* Currency: remove currency symbols, commas, spaces; keep the number
+* Percent: convert "45%" -> 0.45 (divide by 100)
+* Sentence wrappers: extract the numeric value from “The answer is 42.”
+* Fractions/expressions: evaluate to a numeric value
+
+  * "\frac{1}{2}" -> 0.5
+  * "3^2 + 4^2" -> 25
+* Scientific notation:
+
+  * Accept negative exponents only and convert: "1.2e-3" -> 0.0012
+  * If positive exponent scientific notation appears ("3.2e5"), filter out unless you explicitly convert it to a standard decimal form.
+
+Reject (keep=false) if the ground truth is a symbolic expression that does NOT have a single numeric target (e.g., algebraic identities, expressions with multiple valid forms).
+
+Output:
+
+* normalized_ground_truth: a JSON number or a numeric string (choose one and be consistent within your system)
+* type: "numeric"
+
+## B3. String label (type="string_match_single" or "string_match_list")
+
+If the answer is non-numeric and non-multiple-choice, you must represent it as:
+
+* string_match_single: one canonical string, OR
+* string_match_list: a list of acceptable strings to match against.
+
+Important: even if the provided ground truth is a single word (e.g., "winecellar"), you may need to output a list of acceptable synonyms/variants if multiple distinct surface forms would be reasonable and you can enumerate them (e.g., spelling variants, spacing/hyphenation, synonyms). Use string_match_list whenever a single canonical string would be overly brittle. If unsure, tend toward a list of answers to be exahustive.
+
+# C. Universal preprocessing (apply before deciding keep)
+
+Given the raw GROUND_TRUTH, which may be a string or a stringified list (e.g., "['a', 'b']"):
+
+1. Parse into a list of candidate answers:
+
+* If it is already a list, use it.
+* If it is a stringified Python/JSON list, parse it.
+* Otherwise treat it as a single-item list [ground_truth].
+
+2. Normalize each candidate string:
+
+* lowercase
+* trim leading/trailing whitespace
+* collapse multiple internal whitespace to one space
+* strip surrounding quotes
+* remove trailing punctuation (".", "!", "?") when it is not meaning-bearing
+
+3. Drop obvious non-answers (always prune):
+
+* uncertainty markers: "no idea", "not clear", "unknown", "unsure", "can't tell", "cannot tell"
+* placeholders: "thing", "object", "stuff", "foreign", "n/a", "none"
+
+4. Drop answers that are clearly type-mismatched for the QUESTION:
+
+* If QUESTION asks for a country, drop non-countries (e.g., “coastal town”, “foreign”)
+* If QUESTION asks for a color, drop non-colors
+* If QUESTION asks for an action, drop pure place names, materials, etc.
+
+5. Dedupe candidates after normalization.
+
+If pruning removes everything, set keep=false with reason "no_valid_answers_after_pruning".
+
+# D. Consistency rules for string_match_list
+
+Your job is to produce accepted strings that correspond to ONE underlying target concept for that sample.
+
+## D1. Closed answer space (strict consistency + <=3 items)
+
+After preprocessing and pruning, you must end with <=3 canonical items AND they must be mutually consistent.
+
+Mutually consistent means: variants/synonyms for the same target, not competing alternatives.
+
+Examples (closed-space, should be keep=false despite having <=3 items):
+
+* Country question:
+
+  * ["japan", "brazil", "india", "turkey"] => keep=false >3 countries
+
+* Color question:
+
+  * ["red", "blue", "green", "purple"] => keep=false >3 colors
+
+Examples (closed-space, keep=true because items are consistent variants for the same target):
+
+* Country question:
+
+  * ["usa", "u.s.a.", "united states"] => keep=true, normalize to <=3 items
+
+* True/False question:
+
+  * ["true", "yes"] => keep=true only if question is yes/no and you explicitly map them to a single canonical form; otherwise keep as consistent synonyms.
+
+* Color question:
+
+  * ["red", "blue", "green", "light red"] => keep=true 3 color variants
+
+## D2. Open answer space (permissive)
+
+You should keep a longer list (up to 200 strings).
+
+Apply a “dominant cluster” rule:
+
+1. Determine a crude head token for each candidate:
+
+* Noun phrase heuristic: use the final token (e.g., "hair dryer" -> "dryer", "batting tee" -> "tee")
+* Verb/action heuristic: use the first verb-like token (e.g., "brush teeth" -> "brush", "feed it" -> "feed")
+
+2. If candidates split across multiple distinct heads with no dominant head, the list is inconsistent:
+
+* Keep only if one head accounts for at least 60% of remaining candidates.
+* If a dominant head exists, keep only candidates in that dominant head cluster.
+* Optionally keep a small number of hypernyms (very generic forms) ONLY if they do not broaden the answer space excessively for evaluation.
+
+3. If no dominant head exists, set keep=false with reason "inconsistent_open_list_no_dominant_cluster".
+
+Hard cap:
+
+* If the final list exceeds 200 strings, set keep=false with reason "too_many_possible_answers".
+
+Granularity rule:
+
+* If it mixes hypernym/hyponym (e.g., "hit" and "lob"):
+
+  * Keep only if the question wording is broad enough that the hypernym is clearly acceptable.
+  * Otherwise filter out as "granularity_mismatch".
+
+# E. Building synonym/variant lists (including single-word ground truth)
+
+For string answers, you should be exhaustive.
+
+## E1. What you may include (safe expansions)
+
+You should add variants:
+
+* spacing/hyphenation variants: "wine cellar" / "winecellar" / "wine-cellar"
+* common spelling variants: "hairdryer" / "hair dryer"
+* synonyms: "sofa" / "couch"
+* singular/plural variants when applicable: "umbrella" / "umbrellas"
+* abbreviation and acronym variants: "united states" / "us" / "u.s." / "u s"
+* bounded descriptive lexical variants: "trash can" / "garbage can"
+
+## E2. What you must NOT do
+
+* Do not attempt open-ended synonym generation for too broad concepts.
+* Do not include large numbers of unrelated paraphrases.
+* Do not add items that you cannot justify as near-equivalent.
+
+# F. Filter-out conditions (keep=false)
+
+Set keep=false if any are true:
+
+1. Closed answer space and (canonical items > 3 OR items are mutually inconsistent).
+2. Symbolic-form answers that cannot be reduced to a single numeric value.
+3. The answer requires free-form description to evaluate.
+4. After pruning, there are no valid candidates.
+5. Open answer space but no dominant cluster (inconsistent targets).
+6. Final string_match_list exceeds 200 items.
+7. Unsupported scientific notation remains (e.g., positive exponent) and you did not convert it.
+
+# G. Output rules
+
+If keep=false:
+{
+"keep": false,
+"reason": "<concise reason>",
+"normalized_ground_truth": null,
+"type": null
+}
+
+If keep=true:
+
+* Use:
+
+  * type="mc" with a single letter
+  * type="numeric" with one numeric value
+  * type="string_match_single" with one canonical string
+  * type="string_match_list" with an array of acceptable strings
+
+Always ensure normalized_ground_truth is the final, post-pruning, post-deduping value(s).
+
+# H. Pointing prediction with bounding box output
+
+If the question asks for a point in json format, the normalized_ground_truth should be a json with keys "bbox_2d" and "label". (e.g. "[{\"bbox_2d\": [664, 38, 997, 137], \"label\": \"Dornier 328\"}]"). Keep these as is, with type "clicking".
+
+# I. JSON examples
+
+Example 1: Closed-space country, mutually exclusive (reject)
+Question: "Which country is this bus from?"
+Ground truth: "['japan', 'brazil', 'india', 'turkey']"
+{
+"keep": false,
+"reason": "closed_space_mutually_exclusive_competing_answers",
+"normalized_ground_truth": null,
+"type": null
+}
+
+
+Example 2: Closed-space country, consistent variants (keep)
+Question: "Which country is shown?"
+Ground truth: "['USA', 'U.S.A.', 'United States']"
+{
+"keep": true,
+"reason": "closed_space_consistent_variants_within_limit",
+"type": "string_match_list",
+"normalized_ground_truth": [
+  "usa",
+  "u.s.a.",
+  "u s a",
+  "united states",
+  "united-states",
+  "the united states",
+  "us",
+  "u.s.",
+  "u s",
+  "america",
+  "the united states of america",
+  "united states of america",
+  "u.s.a",
+  "u.s",
+  "u s a.",
+  "u s."
+]
+}
+
+
+Example 3: Closed-space color, mutually exclusive (reject)
+Question: "What color is the car?"
+Ground truth: "['red', 'blue', 'purple', 'gold']"
+{
+"keep": false,
+"reason": "closed_space_mutually_exclusive_colors",
+"normalized_ground_truth": null,
+"type": null
+}
+
+
+Example 4: Numeric with units (keep)
+Question: "What is the area in square centimeters?"
+Ground truth: "57.6 cm^2"
+{
+"keep": true,
+"reason": "unit_stripped_numeric",
+"normalized_ground_truth": 57.6,
+"type": "numeric"
+}
+
+
+Example 5: Percent (keep)
+Question: "What is the probability as a decimal?"
+Ground truth: "31.74%"
+{
+"keep": true,
+"reason": "percent_converted_to_decimal",
+"normalized_ground_truth": 0.3174,
+"type": "numeric"
+}
+
+
+Example 6: Pointing / clicking (keep)
+Question: "Find and give the point of McDonnell Douglas DC-10. Output the point in a JSON array format: [{"point_2d": [x, y]}]. Use absolute pixel coordinates (origin at top-left)."
+Ground truth: "[{"bbox_2d": [390, 45, 664, 133], "label": "McDonnell Douglas DC-10"}]"
+{
+"keep": true,
+"reason": "pointing_prediction_with_explicit_bbox_and_label",
+"normalized_ground_truth": [
+{
+"bbox_2d": [390, 45, 664, 133],
+"label": "McDonnell Douglas DC-10"
+}
+],
+"type": "clicking"
+}
+
+
+Example 7: Multiple choice (keep)
+Question: "Which option is correct? A) red car B) blue house"
+Ground truth: "(B) blue house"
+{
+"keep": true,
+"reason": "mc_letter_normalized",
+"normalized_ground_truth": "B",
+"type": "mc"
+}
+
+Example 8: Single word expanded to variants
+Question: "What room is this?"
+Ground truth: "winecellar"
+{
+"keep": true,
+"reason": "bounded_variants_for_brittle_single_word_label",
+"normalized_ground_truth": [
+  "winecellar",
+  "wine cellar",
+  "wine-cellar",
+  "cellar",
+  "wine room",
+  "wine storage room",
+  "wine storage",
+  "wine vault",
+  "wine chamber",
+  "wine cave",
+  "wine caveau",
+  "wine crypt",
+  "wine bunker",
+  "cellar room",
+  "subcellar",
+  "undercroft",
+  "vault",
+  "cave",
+  "cave cellar",
+  "racking room",
+  "barrel room",
+  "maturation room",
+  "aging room",
+  "bond cellar",
+  "chai",
+  "cave à vin",
+  "cave a vin",
+  "wine repository",
+  "wine archive",
+  "reserve cellar",
+  "vaulted cellar",
+  "vinery cellar",
+  "vinous vault",
+  "bacchanal vault",
+  "oenotheca",
+  "cellarium",
+  "cella vinaria",
+  "wine grotto",
+  "wine cavern",
+  "wine den",
+  "wine sanctuary",
+  "wine gallery",
+  "wine library",
+  "wine lounge cellar",
+  "wine gallery cellar",
+  "cellarage",
+  "storage cellar",
+  "cellar vault",
+  "underground storage"
+],
+"type": "string_match_list"
+}
+
+
+Example 9: Open-space object name with synonyms (keep)
+Question: "What appliance is being used?"
+Ground truth: "['hair dryer', 'blow dryer', 'hairdryer', 'blower']"
+{
+"keep": true,
+"reason": "open_space_synonyms_and_spelling_variants",
+"normalized_ground_truth": [
+  "hair dryer",
+  "hairdryer",
+  "hair-dryer",
+  "blow dryer",
+  "blowdryer",
+  "blow-dryer",
+  "handheld hair dryer",
+  "hand held hair dryer",
+  "electric hair dryer",
+  "portable hair dryer",
+  "hand dryer",
+  "ionic hair dryer",
+  "ceramic hair dryer",
+  "salon hair dryer",
+  "professional hair dryer"
+],
+"type": "string_match_list"
+}
+
+
+Example 10: open space name (keep)
+Question: who is this?
+Ground truth: "Bill Clinton"
+{
+"keep": true,
+"reason": "open_space_named_entity_long_alias_list_within_cap",
+"normalized_ground_truth": [
+"bill clinton",
+"president bill clinton",
+"former president bill clinton",
+"us president bill clinton",
+"u.s. president bill clinton",
+"american president bill clinton",
+"bill j clinton",
+"bill j. clinton",
+"bill jefferson clinton",
+"bill jefferson blythe",
+"bill jefferson blythe clinton",
+"william clinton",
+"william j clinton",
+"william j. clinton",
+"william jefferson clinton",
+"william jefferson blythe",
+"william jefferson blythe clinton",
+"william jefferson blythe iii",
+"william jefferson blythe iii clinton",
+"william clinton jr",
+"william clinton jr.",
+"william j clinton jr",
+"william j. clinton jr.",
+"wj clinton",
+"w. j. clinton",
+"w j clinton",
+"will clinton",
+"mr clinton",
+"mr. clinton",
+"mr bill clinton",
+"mr. bill clinton",
+"president clinton",
+"former president clinton",
+"us president clinton",
+"u.s. president clinton",
+"clinton",
+"bill",
+"gov bill clinton",
+"gov. bill clinton",
+"governor bill clinton",
+"governor clinton",
+"arkansas governor bill clinton",
+"arkansas governor clinton",
+"governor of arkansas bill clinton",
+"governor of arkansas clinton",
+"42nd president",
+"42nd us president",
+"42nd u.s. president",
+"42nd president of the united states",
+"forty-second president",
+"forty-second us president",
+"forty-second u.s. president",
+"bill clinton (president)",
+"bill clinton president",
+"william clinton (president)",
+"william clinton president",
+"pres. bill clinton",
+"pres. clinton",
+"pres bill clinton",
+"pres clinton",
+"president william clinton",
+"president william j clinton",
+"president william j. clinton",
+"president william jefferson clinton",
+"former president william clinton",
+"former president william j clinton",
+"former president william j. clinton",
+"former president william jefferson clinton",
+"u.s. president william clinton",
+"us president william clinton",
+"u.s. president william j clinton",
+"us president william j clinton",
+"u.s. president william j. clinton",
+"us president william j. clinton",
+"u.s. president william jefferson clinton",
+"us president william jefferson clinton",
+"president bill j clinton",
+"president bill j. clinton",
+"president bill jefferson clinton",
+"president bill",
+"former president bill",
+"the clintons bill clinton",
+"bill clinton of arkansas",
+"clinton of arkansas",
+"arkansas clinton",
+"bill clinton (arkansas)",
+"clinton (bill)",
+"clinton, bill",
+"clinton william jefferson",
+"clinton william j",
+"clinton william j.",
+"clinton william",
+"clinton bill",
+"clinton bill j",
+"clinton bill j.",
+"clinton bill jefferson",
+"william jefferson clinton (bill clinton)",
+"bill clinton (william jefferson clinton)",
+"william jefferson clinton aka bill clinton",
+"bill clinton aka william jefferson clinton",
+"w j clinton (bill clinton)",
+"wj clinton (bill clinton)",
+"bill clinton (wj clinton)",
+"bill clinton 42nd president",
+"clinton 42nd president",
+"president clinton 42nd",
+"former president clinton 42nd",
+"william jefferson clinton 42nd president",
+"bill clinton (42nd president)"
+],
+"type": "string_match_list"
+}
+
+# I. Your turn
+
+Question: {QUESTION}
+Ground truth: {GROUND_TRUTH}

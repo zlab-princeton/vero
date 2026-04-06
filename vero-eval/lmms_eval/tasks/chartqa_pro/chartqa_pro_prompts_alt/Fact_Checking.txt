@@ -1,0 +1,4 @@
+You are given a fact statement that you need to assess based on the provided image.
+
+Statement: <question> 
+Your boxed answer should be either "true" or "false", or if the question is unanswerable based on the information in the provided image, your boxed answer should be "unanswerable".

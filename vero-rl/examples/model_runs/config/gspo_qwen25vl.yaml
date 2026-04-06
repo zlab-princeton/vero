@@ -1,0 +1,35 @@
+defaults:
+  - gspo_llmjudge_shared
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:REPO_ROOT}/verl/trainer/config
+
+data:
+  max_pixels: 9437184  # 3072 x 3072
+  max_prompt_length: 14336
+  max_response_length: 10240
+  filter_overlong_prompts: true
+  normalize_bbox_to_1000: false
+
+actor_rollout_ref:
+  model:
+    path: "Qwen/Qwen2.5-VL-7B-Instruct"
+  actor:
+    ppo_max_token_len_per_gpu: 24576  # 14336 + 10240
+    fsdp_config:
+      param_offload: true
+      optimizer_offload: true
+  rollout:
+    max_num_batched_tokens: 24576
+    log_prob_max_token_len_per_gpu: 24576
+  ref:
+    log_prob_max_token_len_per_gpu: 24576
+
+critic:
+  ppo_max_token_len_per_gpu: 24576
+  forward_max_token_len_per_gpu: 24576
+
+reward_model:
+  forward_max_token_len_per_gpu: 24576

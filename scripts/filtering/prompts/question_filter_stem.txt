@@ -1,0 +1,73 @@
+Given the image and the question, your task is to independently evaluate the following criteria and set each corresponding flag. A flag should be `"true"` when the issue is present (i.e., the item should be filtered on that criterion) and `"false"` otherwise. Provide one concise overall explanation in `"reason"` summarizing the main driver(s) for any `"true"` flags.
+
+Evaluation criteria:
+
+1. **Relevance Filter (`relevance_filter`)** — Is the image related to the question?
+
+   * Set `"true"` if the image does not depict what the question refers to, or the entities/attributes asked about are absent.
+   * Examples:
+
+     * Asking about a “dog” when no dog or dog-related content appears → `"true"`.
+     * Asking for the diameter of a circle when no circle is present → `"true"`.
+     * The questions asks to tell the answer of the math problem and the image presents text of a math problem, so ocr is required → `"false"` because the text fully describes a math problem and visual ocr must be used to answer it.
+     * The question's information is conflicting with the image content (e.g., for a multiple choice question, none of the options agree with the image).  → `"true"`.
+
+2. **Ambiguity/Vagueness Filter (`ambiguous_filter`)** — Is the question too vague, unclear, or not actually a question?
+
+   * Set `"true"` for unclear referents (“this”, “that”), incomplete/elliptical prompts, or non-question content (e.g., raw lists/tables with no query).
+   * Examples:
+
+     * “What do you think about this?” (no clear referent) → `"true"`.
+     * A list of numbers with no interrogative → `"true"`.
+     * It is not clear how provide a concise and direct answer to the question based on the image content → `"true"`.
+
+3. **Language Filter (`language_filter`)** — Is the question not in English?
+
+   * Set `"true"` if any required reading/understanding is in a language other than English.
+
+4. **Verifiability / Single-Answer Filter (`verifiable_filter`)** — Can the question be answered with a single, objectively verifiable answer *solely from visible content in the image*?
+
+   * Set `"true"` if the answer does not have a single verifiable answer given the image and text inputs, such as involving speculation, predictions/counterfactuals, or if multiple plausible answers exist from the same visual evidence.
+   * Examples:
+
+     * “Who took this photo?”; “What brand is the car?” (no visible logo/text) → `"true"`.
+     * “What will happen next?”; “Where is this?” with no unique landmark → `"true"`.
+     * Text/marks necessary to answer are illegible at given resolution → `"true"`.
+     * “What is the label of the red line in the plot?” with multiple red lines present → `"true"`.
+     * “What is the exact color of the 'Animal' line in the plot?” when its precise color may have multiple correct names → `"true"`.
+     * "How much higher was the 2020 value compared to 2019?" where each data point is not explicitely labeled for a value → verifiable_filter: `"false"`, number_precision_filter: `"true"`.
+     * "How would you calculate the perimeter of ABD?" where the sides are calculatable from the given visual inputs → `"false"`.
+     * "Given the force F and acceleration A, calculate the mass" → `"false"` because the answer can be verifiably written in terms of F and A in the image input.
+     * "Are nodular calcifications present in the lungs?" given a clear x-ray of lungs → `"false"` because a medical expert could answer this from the visual input verifiably.
+     * There are many potential answers that could fit the question equally well based on the image content (e.g. one can provide multiple different correct answers that are equally valid) → `"true"`.
+     * The expected answer structure is not clearly defined (e.g. open-ended “discuss” prompts) → `"true"`.
+
+5. **Numeric Precision / Readability Filter (`number_precision_filter`)** — Does the question demand a numeric precision that the visual cannot unambiguously support?
+
+   * Set `"true"` if exact integers/decimals or derived metrics (e.g., average annual growth rate, percentage change) require precise values that are not explicitly labeled or legibly recoverable from the chart/axes/points.
+   * Even if the question uses approximation language ("about," "approximately," "nearest"), set "true" if the underlying precise value cannot be confidently determined.
+   * Things that can be visually estimated but may have slight ambiguity in numerical answer, mark "true".
+   * Examples:
+
+     * “What was the average annual growth rate of EV registrations in Asia between 2010 and 2020?” from an unlabeled line chart → `"true"`.
+     * “How much did 'cereal' increase from 2019 to 2020?” with legible numbers marked above data points for 2019 & 2020 → `"false"`.
+     * “What is the appoximate difference between the median values of 'Dark and Chocolate' and 'Blue Berry' data points?” when data points are not labeled and exact median is hard to obtain → `"true"`.
+
+
+Decision guidance:
+
+* Multiple flags may be `"true"` simultaneously.
+* If *any* of the above flags is `"true"`, the item is considered filtered for that dimension. Use `"reason"` to summarize the primary cause(s).
+
+**Output Format (json format)**:
+
+```json
+{
+  "relevance_filter": "true",
+  "ambiguous_filter": "false",
+  "language_filter": "false",
+  "verifiable_filter": "true",
+  "number_precision_filter": "true",
+  "reason": "Briefly explain the main reason(s) these filter(s) were triggered."
+}
+```

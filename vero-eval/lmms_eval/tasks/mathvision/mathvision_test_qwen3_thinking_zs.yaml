@@ -1,0 +1,27 @@
+dataset_path: MathLLMs/MathVision
+dataset_kwargs:
+  token: True
+task: "mathvision_test_qwen3_thinking_zs"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mathvision_doc_to_visual
+doc_to_text: !function utils.mathvision_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  do_sample: True
+process_results: !function utils.mathvision_process_results
+metric_list:
+  - metric: mathvision_standard_eval
+    aggregation: !function utils.mathvision_aggregate_results_eval
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_format: solution
+    mc_prompt: ""
+    short_answer_prompt: ""

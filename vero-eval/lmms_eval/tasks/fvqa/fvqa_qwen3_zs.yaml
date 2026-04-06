@@ -1,0 +1,25 @@
+dataset_path: lmms-lab/FVQA
+task: fvqa_qwen3_zs
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.fvqa_doc_to_visual
+doc_to_text: !function utils.fvqa_doc_to_text
+doc_to_target: !function utils.fvqa_doc_to_target
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 1.0
+  top_p: 1.0
+  top_k: 40
+  presence_penalty: 2.0
+  do_sample: True
+process_results: !function utils.fvqa_process_results
+metric_list:
+  - metric: judge_accuracy
+    aggregation: !function utils.fvqa_aggregate_judge_results
+    higher_is_better: true
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

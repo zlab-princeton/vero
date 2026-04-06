@@ -1,0 +1,2 @@
+include: simplevqa_en_qwen3_zs.yaml
+task: "simplevqa_en_gpt5nano_zs"

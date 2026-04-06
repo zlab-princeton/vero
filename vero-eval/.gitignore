@@ -1,0 +1,67 @@
+# Python / Environment
+__pycache__
+*.pyc
+*.egg-info
+build
+dist
+venv
+.venv
+env
+.env
+uv.lock
+*.isorted
+set_paths.sh
+
+# Jupyter / IPython
+.ipynb_checkpoints
+# IPython
+profile_default/
+ipython_config.py
+
+# IDE / System
+.idea
+.vscode/
+.DS_STORE
+workspace/*
+.claude/*
+
+# Logs / Cache / Temporary
+**/.cache
+lm_cache
+cache_dir
+temp
+temp/
+backup
+logs/
+*logs
+zk.log
+span.log
+wandb/
+slurm/*
+slurm/error/*
+
+# Data / Output / Models
+output/
+outputs/
+data/
+submissions/
+ckpt
+pretrained/
+SimSun.ttf
+
+# External Repos / Project Specific
+LLaVA/
+InternVL/
+llava-video/
+Video-MME/
+VATEX/
+scripts/
+TODO.md
+AGENTS.md
+CLAUDE.md
+
+# Specific Ignore Rules
+lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
+lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
+lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc
+lmms_eval/tasks/mlvu/__pycache__/utils.cpython-310.pyc

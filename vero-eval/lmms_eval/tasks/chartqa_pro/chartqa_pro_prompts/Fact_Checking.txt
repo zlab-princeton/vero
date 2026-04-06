@@ -1,0 +1,5 @@
+You are given a fact statement that you need to assess based on the provided image.
+
+Your answer should be either "true" or "false". If the question is unanswerable based on the information in the provided image, your answer should be "unanswerable". If there are multiple answers, put them in brackets using this format [’Answer1’, ’Answer2’].
+
+Question: <question>

@@ -1,0 +1,2 @@
+include: charxiv_val_reasoning.yaml
+task: "charxiv_val_reasoning_gpt5nano_zs"

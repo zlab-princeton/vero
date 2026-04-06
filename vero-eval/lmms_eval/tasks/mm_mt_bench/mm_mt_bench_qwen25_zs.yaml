@@ -1,0 +1,6 @@
+include: mm_mt_bench.yaml
+task: "mm_mt_bench_qwen25_zs"
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  do_sample: False
