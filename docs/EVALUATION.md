@@ -7,60 +7,60 @@ Vero is evaluated on **VeroEvalSuite**, a comprehensive benchmark of **32 divers
 ## VeroEvalSuite Benchmarks
 
 ### Chart & OCR (6 benchmarks)
-| Benchmark | Task Name |
-|-----------|-----------|
-| ChartQA | `chartqa_reasoning` |
-| ChartQA-Pro | `chartqa_pro_reasoning` |
-| InfoVQA | `infovqa_val_reasoning` |
-| CharXiv | `charxiv_reasoning` |
-| ChartMuseum | `chartmuseum_reasoning` |
-| EvoChart | `evochart_reasoning` |
+| Benchmark | Task Name | Dataset |
+|-----------|-----------|---------|
+| ChartQA | `chartqa_reasoning` | [`lmms-lab/ChartQA`](https://huggingface.co/datasets/lmms-lab/ChartQA) |
+| ChartQA-Pro | `chartqa_pro_reasoning` | [`ahmed-masry/ChartQAPro`](https://huggingface.co/datasets/ahmed-masry/ChartQAPro) |
+| InfoVQA | `infovqa_val_reasoning` | [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA) |
+| CharXiv | `charxiv_reasoning` | [`princeton-nlp/CharXiv`](https://huggingface.co/datasets/princeton-nlp/CharXiv) |
+| ChartMuseum | `chartmuseum_reasoning` | [`gsarch/ChartMuseum`](https://huggingface.co/datasets/gsarch/ChartMuseum) |
+| EvoChart | `evochart_reasoning` | [`gsarch/EvoChart-QA`](https://huggingface.co/datasets/gsarch/EvoChart-QA) |
 
 ### STEM (4 benchmarks)
-| Benchmark | Task Name |
-|-----------|-----------|
-| MMMU-PRO Standard | `mmmu_pro_standard_reasoning` |
-| MMMU-PRO Vision | `mmmu_pro_vision_reasoning` |
-| MathVision | `mathvision_test_reasoning` |
-| MathVista | `mathvista_testmini_reasoning` |
+| Benchmark | Task Name | Dataset |
+|-----------|-----------|---------|
+| MMMU-PRO Standard | `mmmu_pro_standard_reasoning` | [`MMMU/MMMU_Pro`](https://huggingface.co/datasets/MMMU/MMMU_Pro) |
+| MMMU-PRO Vision | `mmmu_pro_vision_reasoning` | [`MMMU/MMMU_Pro`](https://huggingface.co/datasets/MMMU/MMMU_Pro) |
+| MathVision | `mathvision_test_reasoning` | [`MathLLMs/MathVision`](https://huggingface.co/datasets/MathLLMs/MathVision) |
+| MathVista | `mathvista_testmini_reasoning` | [`AI4Math/MathVista`](https://huggingface.co/datasets/AI4Math/MathVista) |
 
 ### Spatial & Action (5 benchmarks)
-| Benchmark | Task Name |
-|-----------|-----------|
-| CVBench | `cv_bench_reasoning` |
-| EmbSpatial | `embspatial_reasoning` |
-| ERQA | `erqa_reasoning` |
-| GameQA | `game_qa_lite_reasoning` |
-| Blink | `blink_reasoning` |
+| Benchmark | Task Name | Dataset |
+|-----------|-----------|---------|
+| CVBench | `cv_bench_reasoning` | [`nyu-visionx/CV-Bench`](https://huggingface.co/datasets/nyu-visionx/CV-Bench) |
+| EmbSpatial | `embspatial_reasoning` | [`FlagEval/EmbSpatial-Bench`](https://huggingface.co/datasets/FlagEval/EmbSpatial-Bench) |
+| ERQA | `erqa_reasoning` | [`FlagEval/ERQA`](https://huggingface.co/datasets/FlagEval/ERQA) |
+| GameQA-Lite | `game_qa_lite_reasoning` | [`gsarch/Game-QA-Lite`](https://huggingface.co/datasets/gsarch/Game-QA-Lite) |
+| Blink | `blink_reasoning` | [`BLINK-Benchmark/BLINK`](https://huggingface.co/datasets/BLINK-Benchmark/BLINK) |
 
 ### Knowledge & Recognition (4 benchmarks)
-| Benchmark | Task Name |
-|-----------|-----------|
-| RealWorldQA | `realworldqa_reasoning` |
-| SimpleVQA (English) | `simplevqa_en_reasoning` |
-| FVQA | `fvqa_reasoning` |
-| MM-Vet V2 | `mmvetv2_group_img_reasoning` |
+| Benchmark | Task Name | Dataset |
+|-----------|-----------|---------|
+| RealWorldQA | `realworldqa_reasoning` | [`lmms-lab/RealWorldQA`](https://huggingface.co/datasets/lmms-lab/RealWorldQA) |
+| SimpleVQA (English) | `simplevqa_en_reasoning` | [`gsarch/SimpleVQA-EN`](https://huggingface.co/datasets/gsarch/SimpleVQA-EN) |
+| FVQA | `fvqa_reasoning` | [`lmms-lab/FVQA`](https://huggingface.co/datasets/lmms-lab/FVQA) |
+| MM-Vet V2 | `mmvetv2_group_img_reasoning` | [`whyu/mm-vet-v2`](https://huggingface.co/datasets/whyu/mm-vet-v2) |
 
 ### Grounding, Counting & Visual Search (10 benchmarks)
-| Benchmark | Task Name |
-|-----------|-----------|
-| CountBenchQA | `countbenchqa_reasoning` |
-| CountQA | `countqa_reasoning` |
-| MME-RealWorld | `mme_realworld_lite_reasoning` |
-| V*Bench | `vstar_bench_reasoning` |
-| AerialVG | `aerialvg_bbox_reasoning` |
-| VisualProbe (Easy) | `visual_probe_easy_reasoning` |
-| VisualProbe (Medium) | `visual_probe_medium_reasoning` |
-| VisualProbe (Hard) | `visual_probe_hard_reasoning` |
-| ScreenSpot | `screenspot_point_in_box_reasoning` |
-| ScreenSpotPro | `screenspotpro_point_in_box_reasoning` |
+| Benchmark | Task Name | Dataset |
+|-----------|-----------|---------|
+| CountBenchQA | `countbenchqa_reasoning` | [`vikhyatk/CountBenchQA`](https://huggingface.co/datasets/vikhyatk/CountBenchQA) |
+| CountQA | `countqa_reasoning` | [`Jayant-Sravan/CountQA`](https://huggingface.co/datasets/Jayant-Sravan/CountQA) |
+| MME-RealWorld-Lite | `mme_realworld_lite_reasoning` | [`yifanzhang114/MME-RealWorld-lite-lmms-eval`](https://huggingface.co/datasets/yifanzhang114/MME-RealWorld-lite-lmms-eval) |
+| V*Bench | `vstar_bench_reasoning` | [`lmms-lab/vstar-bench`](https://huggingface.co/datasets/lmms-lab/vstar-bench) |
+| AerialVG | `aerialvg_bbox_reasoning` | [`IPEC-COMMUNITY/AerialVG`](https://huggingface.co/datasets/IPEC-COMMUNITY/AerialVG) |
+| VisualProbe (Easy) | `visual_probe_easy_reasoning` | [`Mini-o3/VisualProbe_Easy`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Easy) |
+| VisualProbe (Medium) | `visual_probe_medium_reasoning` | [`Mini-o3/VisualProbe_Medium`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Medium) |
+| VisualProbe (Hard) | `visual_probe_hard_reasoning` | [`Mini-o3/VisualProbe_Hard`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Hard) |
+| ScreenSpot | `screenspot_point_in_box_reasoning` | [`rootsautomation/ScreenSpot`](https://huggingface.co/datasets/rootsautomation/ScreenSpot) |
+| ScreenSpotPro | `screenspotpro_point_in_box_reasoning` | [`likaixin/ScreenSpot-Pro`](https://huggingface.co/datasets/likaixin/ScreenSpot-Pro) |
 
 ### Captioning & Instruction Following (3 benchmarks)
-| Benchmark | Task Name |
-|-----------|-----------|
-| MM-MTBench | `mm_mt_bench_reasoning` |
-| MIABench | `mia_bench_reasoning` |
-| MMIFEval | `mmifeval_reasoning` |
+| Benchmark | Task Name | Dataset |
+|-----------|-----------|---------|
+| MM-MTBench | `mm_mt_bench_reasoning` | [`mistralai/MM-MT-Bench`](https://huggingface.co/datasets/mistralai/MM-MT-Bench) |
+| MIABench | `mia_bench_reasoning` | [`lmms-lab/MIA-Bench`](https://huggingface.co/datasets/lmms-lab/MIA-Bench) |
+| MMIFEval | `mmifeval_reasoning` | [`lscpku/MMIFEval`](https://huggingface.co/datasets/lscpku/MMIFEval) |
 
 ## Quick Start
 
