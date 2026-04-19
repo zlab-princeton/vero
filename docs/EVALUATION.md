@@ -118,6 +118,15 @@ bash examples/submit_eval_array.sh \
     --model-family qwen3
 ```
 
+## System Prompt
+
+The Vero system prompt (which defines the `<think>` / `<answer>` output format) is **already baked into the chat template**. If you do not pass a system message, the chat template uses it by default — no extra setup is needed. The chat template also appends a `<think>` token at the start of the assistant turn to kick off reasoning, so **do not add `<think>` manually** to the prompt.
+
+**If you want to use a custom system prompt**, you have two options:
+
+1. **Recommended:** keep the chat template's default system prompt and place your custom instructions in the user message.
+2. Override the system role entirely — in this case, make sure your custom system prompt still instructs the model to produce the `<think>` / `<answer>` format, or append the Vero prompt from [`vero-eval/examples/prompts/vero_system_prompt.txt`](../vero-eval/examples/prompts/vero_system_prompt.txt) to yours.
+
 ## Chain-of-Thought Evaluation
 
 Vero models generate reasoning traces in `<think>` tags. The evaluation harness uses an **LLM judge** to extract the final answer from the reasoning trace.
