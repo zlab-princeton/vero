@@ -2,7 +2,57 @@
 
 ## Overview
 
-Vero is evaluated on **VeroEvalSuite**, a comprehensive benchmark of **32 diverse benchmarks** across all 6 task categories. The evaluation harness is in `vero-eval/`, a fork of [lmms-eval](https://github.com/EvolvingLMMs-Lab/lmms-eval).
+Vero is evaluated on **VeroEvalSuite**, a comprehensive benchmark of **30 diverse benchmarks** across all 6 task categories. The evaluation harness is in `vero-eval/`, a fork of [lmms-eval](https://github.com/EvolvingLMMs-Lab/lmms-eval).
+
+> **In a hurry / using an AI coding agent?** Follow [docs/AGENTS_SETUP.md](AGENTS_SETUP.md) — it walks an agent (Claude Code or Codex) or a human through environment setup, cache paths, HF login, the judge model, and a smoke eval, end to end.
+
+## Environment & Data Setup
+
+Before running any benchmark you need (1) the `verovlm` environment, (2) Hugging Face cache paths on a roomy disk, (3) an HF login for gated datasets, and (4) an LLM judge for the reasoning variants.
+
+### 1. Install the environment
+
+```bash
+bash scripts/setup_env.sh          # creates the verovlm conda env
+```
+
+### 2. Set cache paths and the judge (one file)
+
+Benchmark datasets, the model under test, and the judge **all download automatically on first run** via Hugging Face. Where they land is controlled by the standard `HF_HOME` / `HF_DATASETS_CACHE` / `HF_HUB_CACHE` variables. Copy the template, point it at a disk with plenty of space, and source it in every shell:
+
+```bash
+cp scripts/set_paths.sh.example set_paths.sh   # at the repo root
+$EDITOR set_paths.sh                           # set ROOT_PATH (a disk with space)
+source set_paths.sh                            # sets HF_HOME, caches, JUDGE_MODEL_PATH
+```
+
+`set_paths.sh` is git-ignored, so your paths and tokens never get committed. To override the download location ad hoc, just export the variables yourself:
+
+```bash
+export HF_HOME=/path/to/hf_cache               # everything caches under here
+```
+
+### 3. Log in to Hugging Face
+
+Several datasets are gated (e.g. `MMMU/MMMU_Pro`). Authenticate once:
+
+```bash
+huggingface-cli login        # or: export HF_TOKEN=hf_xxx
+```
+
+### 4. Pick (and optionally pre-download) the judge
+
+The reasoning variants extract the final answer with a local **LLM judge** (see [Judge Setup](#judge-setup)). Set `JUDGE_MODEL_PATH` to a local directory or an HF id; it downloads on first use. `set_paths.sh` defaults it to `Qwen/Qwen3-32B`.
+
+### 5. Preflight (recommended)
+
+Verify everything — env imports, GPUs, HF login, judge — and optionally pre-fetch the judge, without launching a GPU run:
+
+```bash
+cd vero-eval
+bash examples/preflight.sh                  # checks only
+bash examples/preflight.sh --download-judge # also pre-downloads the judge
+```
 
 ## VeroEvalSuite Benchmarks
 
@@ -41,7 +91,7 @@ Vero is evaluated on **VeroEvalSuite**, a comprehensive benchmark of **32 divers
 | FVQA | `fvqa_reasoning` | [`lmms-lab/FVQA`](https://huggingface.co/datasets/lmms-lab/FVQA) |
 | MM-Vet V2 | `mmvetv2_group_img_reasoning` | [`whyu/mm-vet-v2`](https://huggingface.co/datasets/whyu/mm-vet-v2) |
 
-### Grounding, Counting & Visual Search (10 benchmarks)
+### Grounding, Counting & Visual Search (8 benchmarks — VisualProbe is split into 3 difficulty levels)
 | Benchmark | Task Name | Dataset |
 |-----------|-----------|---------|
 | CountBenchQA | `countbenchqa_reasoning` | [`vikhyatk/CountBenchQA`](https://huggingface.co/datasets/vikhyatk/CountBenchQA) |
@@ -64,37 +114,64 @@ Vero is evaluated on **VeroEvalSuite**, a comprehensive benchmark of **32 divers
 
 ## Quick Start
 
+The `examples/eval.sh` wrapper is the simplest entry point — it wires up the judge for you:
+
 ```bash
 cd vero-eval
 
-# Evaluate a single model on a single benchmark
+# chartqa_reasoning uses rule-based extraction (no judge needed)
+bash examples/eval.sh \
+    --model-path zlab-princeton/Vero-Qwen3I-8B \
+    --tasks chartqa_reasoning \
+    --limit 5                       # drop --limit for the full set
+
+# mathvista_testmini_reasoning needs a judge — pass it with --judge-model.
+# Judge-based tasks need 2 GPUs (model + judge), so use --num-gpus 2.
+bash examples/eval.sh \
+    --model-path zlab-princeton/Vero-Qwen3I-8B \
+    --tasks mathvista_testmini_reasoning \
+    --judge-model Qwen/Qwen3-32B \
+    --num-gpus 2
+```
+
+Equivalent direct invocation (the judge is read from `JUDGE_MODEL_PATH`, not a CLI flag):
+
+```bash
+cd vero-eval
+export JUDGE_MODEL_PATH=Qwen/Qwen3-32B   # only needed for judge-based tasks
+
 python -m lmms_eval \
     --model vllm \
     --model_args model=zlab-princeton/Vero-Qwen3I-8B,tensor_parallel_size=1 \
-    --tasks chartqa_reasoning \
-    --batch_size 2048 \
+    --tasks mathvista_testmini_reasoning \
+    --batch_size 1 \
+    --log_samples \
     --output_path ./eval_results/
 ```
 
 ## Using eval_domain.sh
 
-The domain evaluation script is `vero-eval/examples/eval_domain.sh`. It handles:
-- Dynamic port allocation for judge servers
-- Model-specific decoding configurations
-- Multiple benchmark presets
+The domain evaluation script is `vero-eval/examples/eval_domain.sh`. It expands a
+`--domain` + `--variant` pair into the full task list and runs them in one
+`lmms_eval` invocation. Pass `--judge-model` for the reasoning variants (it
+exports `JUDGE_MODEL_PATH`).
 
 ```bash
-# Evaluate on a single domain
+# Evaluate on a single domain (reasoning domains use the judge → --num-gpus 2)
 bash examples/eval_domain.sh \
     --model-path /path/to/model/checkpoint \
     --domain chart_ocr \
-    --variant reasoning
+    --variant reasoning \
+    --judge-model Qwen/Qwen3-32B \
+    --num-gpus 2
 
 # Evaluate on all domains
 bash examples/eval_domain.sh \
     --model-path /path/to/model/checkpoint \
     --domain all \
-    --variant reasoning
+    --variant reasoning \
+    --judge-model Qwen/Qwen3-32B \
+    --num-gpus 2
 ```
 
 ### Task Presets
@@ -109,13 +186,28 @@ The eval script supports preset groups for running benchmarks by category:
 
 ## Batch Evaluation
 
-To evaluate multiple checkpoints (e.g., from a training run):
+To evaluate a whole category (or everything) in one run, use `eval_domain.sh` with
+`--domain all`:
 
 ```bash
-bash examples/submit_eval_array.sh \
-    --ckpt-dir /path/to/checkpoints/ \
-    --tasks "chartqa_reasoning,mathvista_testmini_reasoning" \
-    --model-family qwen3
+bash examples/eval_domain.sh \
+    --model-path /path/to/checkpoint \
+    --domain all \
+    --variant reasoning \
+    --judge-model Qwen/Qwen3-32B
+```
+
+To sweep several checkpoints, loop over `eval.sh` / `eval_domain.sh` with a distinct
+`--output-path` per checkpoint:
+
+```bash
+for ckpt in /path/to/checkpoints/global_step_*; do
+  bash examples/eval_domain.sh \
+      --model-path "$ckpt" \
+      --domain all --variant reasoning \
+      --judge-model Qwen/Qwen3-32B \
+      --output-path "./eval_results/$(basename "$ckpt")"
+done
 ```
 
 ## System Prompt
@@ -129,20 +221,57 @@ The Vero system prompt (which defines the `<think>` / `<answer>` output format) 
 
 ## Chain-of-Thought Evaluation
 
-Vero models generate reasoning traces in `<think>` tags. The evaluation harness uses an **LLM judge** to extract the final answer from the reasoning trace.
+Vero models generate reasoning traces in `<think>` tags. Tasks fall into two groups:
+
+- **Rule-based extraction** (no judge): the final answer is parsed from `<answer>…</answer>` / `\boxed{…}` — e.g. `chartqa_reasoning`, the ScreenSpot point/bbox tasks.
+- **Judge-based extraction** (needs a judge): an **LLM judge** reads the trace and scores or extracts the answer — `mathvista`, `mathvision`, `mmvetv2`, `mm_mt_bench`, `mia_bench`, `mmifeval`, `fvqa`, `simplevqa`, `charxiv`, `chartmuseum`, `visual_probe`.
 
 ### Judge Setup
 
-The judge runs as a vLLM server (OpenAI-compatible):
-- **Default model**: Qwen3-32B
-- **Thinking mode**: Disabled (for consistent answer extraction)
-- **Temperature**: 0.7
+The judge is selected **by environment variables**, not CLI flags:
 
-The judge server starts automatically during evaluation. To configure:
 ```bash
-export JUDGE_MODEL_PATH="/path/to/Qwen3-32B"
-export JUDGE_BACKEND="engine"  # or "server"
+export JUDGE_MODEL_PATH=Qwen/Qwen3-32B    # local dir or HF id (downloads on first use)
+export API_TYPE=vllm                      # use the local judge (see note below)
 ```
+
+`examples/eval.sh --judge-model <model>` and `examples/eval_domain.sh --judge-model <model>` export both of these for you (and `set_paths.sh` sets them globally).
+
+> **`API_TYPE` picks the backend.** Most judge tasks default to the local vLLM judge, but a few (`mmvetv2`, `mm_mt_bench`, `mia_bench`, `mmifeval`) default to the **OpenAI** backend — so set `API_TYPE=vllm` to keep everything local. To use an OpenAI `gpt-4o-*` judge instead, set `API_TYPE=openai`, `JUDGE_MODEL_PATH=gpt-4o-2024-05-13`, and `GPT_API_KEY`.
+
+> **If `JUDGE_MODEL_PATH` is unset, judge tasks fall back to OpenAI `gpt-4o-*`** and require `GPT_API_KEY`. Set a local judge (above) to stay fully offline/free.
+
+**GPU requirement.** Judge-based tasks need **2 GPUs** — one for the model under test and one for the judge. Run them with `--num-gpus 2` (the wrappers give the judge the same GPU count, i.e. `CHARXIV_JUDGE_TENSOR_PARALLEL_SIZE=$NUM_GPUS`). **Rule-based tasks** (e.g. `chartqa_reasoning`, the ScreenSpot tasks) use no judge and run on **1 GPU**.
+
+The judge loads in-process as a separate vLLM engine. Tune it with:
+
+```bash
+export CHARXIV_JUDGE_TENSOR_PARALLEL_SIZE=2     # judge GPUs (defaults to --num-gpus)
+export CHARXIV_JUDGE_MAX_MODEL_LEN=18384        # cap judge context
+```
+
+**Server mode (optional).** To run the judge as a standalone OpenAI-compatible vLLM server instead of in-process (e.g. to pin it to dedicated GPUs), launch `vllm serve <judge>` yourself and set:
+
+```bash
+export VLLM_SERVER_JUDGE=1
+export VLLM_JUDGE_BASE_URL=http://127.0.0.1:<port>/v1   # your vllm serve endpoint
+```
+
+> Note: `--launcher_args` in `lmms_eval` controls a *different* (sglang-based) judge framework and is **not** used by VeroEvalSuite's reasoning tasks. Use `JUDGE_MODEL_PATH` as above.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `unrecognized arguments: --judge_model_name ...` | Old wrapper passed a non-existent CLI flag | Update to the current `eval.sh`/`eval_domain.sh`; the judge is set via `JUDGE_MODEL_PATH` / `--judge-model`, not a CLI arg. |
+| `RuntimeError: Unable to resolve judge model path` / unexpected calls to `gpt-4o` / `GPT_API_KEY` errors | `JUDGE_MODEL_PATH` not set, so a judge task fell back to OpenAI | `export JUDGE_MODEL_PATH=Qwen/Qwen3-32B` (or pass `--judge-model`). |
+| `mmvetv2`/`mm_mt_bench`/`mia_bench`/`mmifeval` still call `api.openai.com` despite a local judge | These tasks default to `API_TYPE=openai` | `export API_TYPE=vllm` (set automatically by `--judge-model` and `set_paths.sh`). |
+| Judge task OOMs / hangs on a single GPU | Judge has no GPU of its own | Judge tasks need **2 GPUs** — run with `--num-gpus 2`. |
+| Gated dataset / `401` / `you need to be authenticated` | Not logged in to Hugging Face | `huggingface-cli login` or `export HF_TOKEN=...`. |
+| Disk fills up in `~/.cache/huggingface` | `HF_HOME` not redirected | `source set_paths.sh` (sets `HF_HOME`), or `export HF_HOME=/path/with/space`. |
+| vLLM CUDA OOM loading the model | GPU memory fraction too high | Lower it: `--gpu-mem-util 0.7` (or add `gpu_memory_utilization=0.7` to `--model_args`). |
+| OOM when the **judge** loads | Judge too big for one card | `export CHARXIV_JUDGE_TENSOR_PARALLEL_SIZE=2`, use a higher-memory GPU, or a smaller judge. |
+| Want to verify setup without a full run | — | `bash examples/preflight.sh` (add `--download-judge` to pre-fetch the judge). |
 
 ## Adding New Benchmarks
 

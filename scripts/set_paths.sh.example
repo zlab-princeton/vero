@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# set_paths.sh — per-user environment + cache paths for Vero.
+#
+# Quick start:
+#   cp scripts/set_paths.sh.example set_paths.sh   # at the repo root
+#   $EDITOR set_paths.sh                           # set ROOT_PATH (and HF_TOKEN)
+#   source set_paths.sh                            # run before training / eval
+#
+# `set_paths.sh` (without the .example suffix) is git-ignored, so your local
+# paths and tokens never get committed. Source it before launching anything.
+
+# ---- Edit these for your account -------------------------------------------
+# Repo root is auto-detected when you copy this to the repo root and `source` it.
+REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
+export REPO_ROOT
+
+# A directory with plenty of free disk for caches, datasets, and checkpoints
+# (i.e. not a size-limited home directory).
+export ROOT_PATH="${ROOT_PATH:-$HOME/vero_root}"
+
+# ---- Activate the environment ----------------------------------------------
+# scripts/setup_env.sh creates a conda env named "verovlm" by default.
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-verovlm}"
+if command -v conda &>/dev/null; then
+    # shellcheck disable=SC1091
+    eval "$(conda shell.bash hook)"
+    conda activate "${CONDA_ENV_NAME}" 2>/dev/null \
+        || echo "[set_paths] conda env '${CONDA_ENV_NAME}' not found — run: bash scripts/setup_env.sh"
+fi
+
+# ---- Hugging Face caches (where models + datasets download to) -------------
+# Everything Hugging Face downloads — eval datasets, the model under test, and
+# the LLM judge — lands under HF_HOME. Point it at a roomy disk.
+export HF_HOME="${HF_HOME:-$ROOT_PATH/hf_cache}"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_HOME/datasets}"
+export HF_HUB_CACHE="${HF_HUB_CACHE:-$HF_HOME/hub}"
+mkdir -p "$HF_DATASETS_CACHE" "$HF_HUB_CACHE"
+
+# Hugging Face access token — needed for gated datasets and private models.
+# Prefer `huggingface-cli login`; or uncomment and paste a token here:
+# export HF_TOKEN="hf_..."
+
+# ---- LLM judges ------------------------------------------------------------
+# Evaluation and RL training use DIFFERENT judges:
+#
+#  * Evaluation (CoT answer extraction): JUDGE_MODEL_PATH, default Qwen/Qwen3-32B.
+#    A local dir or HF id (downloads on first use, under HF_HOME). If unset, judge
+#    tasks fall back to OpenAI gpt-4o and require GPT_API_KEY. See
+#    docs/EVALUATION.md for judge tuning (GPU sharding, server mode).
+export JUDGE_MODEL_PATH="${JUDGE_MODEL_PATH:-Qwen/Qwen3-32B}"
+#    API_TYPE selects the eval judge backend. "vllm" runs the local judge above;
+#    a few tasks (mmvetv2/mm_mt_bench/mia_bench/mmifeval) default to the OpenAI
+#    backend, so set this to use the local judge. For an OpenAI gpt-4o judge
+#    instead, set API_TYPE=openai and GPT_API_KEY.
+export API_TYPE="${API_TYPE:-vllm}"
+#
+#  * RL training (reward judge): VLLM_JUDGE_MODEL_PATH, default Qwen/Qwen3.5-27B.
+#    Uncomment to override the training run scripts' default:
+# export VLLM_JUDGE_MODEL_PATH=Qwen/Qwen3.5-27B
+
+# ---- Offline mode (machines without internet at runtime) -------------------
+# Uncomment AFTER everything is cached to forbid network calls:
+# export HF_HUB_OFFLINE=1
+# export TRANSFORMERS_OFFLINE=1
+# export HF_DATASETS_OFFLINE=1
+
+echo "[set_paths] HF_HOME=$HF_HOME"
+echo "[set_paths] JUDGE_MODEL_PATH=${JUDGE_MODEL_PATH}"

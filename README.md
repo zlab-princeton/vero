@@ -123,9 +123,11 @@ See [docs/MODELS.md](docs/MODELS.md) for the documented model families, training
 
 ### Quick Start
 
-First prepare the repo-local training data:
+First set cache paths (the base model and reward judge download on the fly under `HF_HOME`) and prepare the repo-local training data:
 
 ```bash
+cp scripts/set_paths.sh.example set_paths.sh   # edit ROOT_PATH (a roomy disk)
+source set_paths.sh                            # sets HF_HOME, activates verovlm
 python scripts/download_and_format_vero_600k.py
 ```
 
@@ -136,6 +138,8 @@ export ROOT_PATH="/path/to/data_root"  # for datasets and checkpoints
 cd vero-rl
 bash examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh
 ```
+
+The reward judge (`Qwen/Qwen3.5-27B` by default) downloads on first use; override it with `export VLLM_JUDGE_MODEL_PATH=<model>`.
 
 Optional dataset overrides:
 
@@ -150,6 +154,8 @@ The training scripts auto-detect `REPO_ROOT` from their location, manage the LLM
 ---
 
 ## Evaluation
+
+Evaluation is independent of training — if you only want to run the benchmarks, you can skip the training setup entirely.
 
 Vero is evaluated with `vero-eval`, an evaluation harness built on [lmms-eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) which houses VeroEvalSuite, a 30-benchmark suite spanning:
 
@@ -173,33 +179,46 @@ Vero is evaluated with `vero-eval`, an evaluation harness built on [lmms-eval](h
 
 ### Quick Start
 
+First set your cache paths and Hugging Face login (datasets and models download
+on the fly under `HF_HOME`), then verify the machine is ready:
+
+```bash
+cp scripts/set_paths.sh.example set_paths.sh   # edit ROOT_PATH (a roomy disk)
+source set_paths.sh                            # sets HF_HOME, caches, JUDGE_MODEL_PATH
+huggingface-cli login                          # gated datasets (e.g. MMMU_Pro)
+
+cd vero-eval
+bash examples/preflight.sh --download-judge    # check env/GPU/login + pre-fetch judge
+```
+
+Then run an evaluation:
+
 ```bash
 cd vero-eval
 
-# Evaluate on a single task
+# Single task (rule-based, no judge needed); --limit for a quick smoke test
 bash examples/eval.sh \
     --model-path zlab-princeton/Vero-Qwen3I-8B \
-    --tasks chartqa_reasoning
+    --tasks chartqa_reasoning \
+    --limit 5
 
-# Evaluate on a full domain
+# A full domain. Reasoning variants need a judge (pass it with --judge-model);
+# judge-based tasks need 2 GPUs — one for the model, one for the judge.
 bash examples/eval_domain.sh \
     --model-path zlab-princeton/Vero-Qwen3I-8B \
     --domain chart_ocr \
-    --variant reasoning
+    --variant reasoning \
+    --judge-model Qwen/Qwen3-32B \
+    --num-gpus 2
 ```
 
-For direct `lmms_eval` usage:
+> The judge is selected by the `JUDGE_MODEL_PATH` env var (which `--judge-model`
+> sets). If left unset, judge-based tasks fall back to OpenAI `gpt-4o` and need
+> `GPT_API_KEY`. Judge tasks require 2 GPUs. See
+> [docs/EVALUATION.md](docs/EVALUATION.md#judge-setup).
 
-```bash
-cd vero-eval
-
-python -m lmms_eval \
-    --model vllm \
-    --model_args model=zlab-princeton/Vero-Qwen3I-8B,tensor_parallel_size=1 \
-    --tasks chartqa_reasoning \
-    --batch_size 2048 \
-    --output_path ./eval_results/
-```
+**Setting up with an AI coding agent?** [docs/AGENTS_SETUP.md](docs/AGENTS_SETUP.md)
+is a one-file runbook a Claude Code / Codex agent (or a human) can follow end to end.
 
 See [docs/EVALUATION.md](docs/EVALUATION.md) for benchmark coverage, judge configuration, and evaluation workflows.
 
@@ -219,6 +238,7 @@ Vero/
 
 ## Documentation
 
+- [Agent Setup Guide](docs/AGENTS_SETUP.md) — one-file, end-to-end setup + eval runbook for AI coding agents (Claude Code / Codex) or humans
 - [Training Guide](docs/TRAINING.md)
 - [Evaluation Guide](docs/EVALUATION.md)
 - [Data Guide](docs/DATA.md)

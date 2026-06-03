@@ -21,7 +21,7 @@ llm_judge_setup_and_start() {
   repo_root="${REPO_ROOT:-$(cd "$shared_dir/../.." && pwd)}"
 
   GPU_MEMORY_UTILIZATION_LLM_JUDGE="${GPU_MEMORY_UTILIZATION_LLM_JUDGE:-0.35}"
-  VLLM_JUDGE_MODEL_PATH="${VLLM_JUDGE_MODEL_PATH:-Qwen/Qwen3-32B}"
+  VLLM_JUDGE_MODEL_PATH="${VLLM_JUDGE_MODEL_PATH:-Qwen/Qwen3.5-27B}"
   VLLM_JUDGE_CHAT_TEMPLATE="${VLLM_JUDGE_CHAT_TEMPLATE:-$repo_root/examples/prompts/chat_template_no_think.jinja}"
 
   trap cleanup_vllm_server EXIT

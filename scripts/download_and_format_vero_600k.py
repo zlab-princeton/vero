@@ -17,7 +17,7 @@ from huggingface_hub import snapshot_download
 from PIL import Image as PILImage
 
 
-DEFAULT_REPO_ID = "gsarch/Vero-600k"
+DEFAULT_REPO_ID = "zlab-princeton/Vero-600k"
 DEFAULT_TRAIN_FILENAME = "vero_600k_train.verl.jsonl"
 DEFAULT_VAL_FILENAME = "vero_600k_val.verl.jsonl"
 def parse_args() -> argparse.Namespace:

@@ -20,7 +20,7 @@ START_VLLM_JUDGE_SERVER="1"
 VLLM_JUDGE_PORT="51001"
 VLLM_JUDGE_API_KEY="qwen"
 VLLM_JUDGE_MODEL_NAME="qwen_vllm"
-VLLM_JUDGE_MODEL_PATH="$HF_HOME/Qwen/Qwen3.5-27B"
+VLLM_JUDGE_MODEL_PATH="${VLLM_JUDGE_MODEL_PATH:-Qwen/Qwen3.5-27B}"
 VLLM_JUDGE_CHAT_TEMPLATE="$REPO_ROOT/examples/prompts/chat_template_no_think.jinja"
 
 # shellcheck source=/dev/null

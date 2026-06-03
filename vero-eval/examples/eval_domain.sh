@@ -22,6 +22,13 @@
 #     --model-path XiaomiMiMo/MiMo-VL-7B-RL \
 #     --domain all \
 #     --variant mimo_zs
+#
+#   # Reasoning variants need a judge — pass a local model via --judge-model
+#   # (exports JUDGE_MODEL_PATH, which every judge task reads):
+#   bash examples/eval_domain.sh \
+#     --model-path zlab-princeton/Vero-Qwen3I-8B \
+#     --domain stem --variant reasoning \
+#     --judge-model Qwen/Qwen3-32B
 
 set -euo pipefail
 
@@ -45,6 +52,8 @@ OUTPUT_PATH="./eval_results"
 BATCH_SIZE=1
 NUM_GPUS=1
 JUDGE_MODEL=""
+GPU_MEM_UTIL=""
+EXTRA_ARGS=""
 
 # ── parse args ────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -56,7 +65,8 @@ while [[ $# -gt 0 ]]; do
     --batch-size)   BATCH_SIZE="$2"; shift 2 ;;
     --num-gpus)     NUM_GPUS="$2"; shift 2 ;;
     --judge-model)  JUDGE_MODEL="$2"; shift 2 ;;
-    *)              shift ;;
+    --gpu-mem-util) GPU_MEM_UTIL="$2"; shift 2 ;;
+    *)              EXTRA_ARGS="$EXTRA_ARGS $1"; shift ;;
   esac
 done
 
@@ -90,10 +100,24 @@ for d in "${DOMAINS[@]}"; do
   done
 done
 
-# ── build judge args ──────────────────────────────────────────────────
-JUDGE_ARGS=""
+# ── configure judge ───────────────────────────────────────────────────
+# Judge tasks read JUDGE_MODEL_PATH (an env var, not a CLI flag). --judge-model
+# exports it for this run; you can also set it in set_paths.sh.
 if [[ -n "$JUDGE_MODEL" ]]; then
-  JUDGE_ARGS="--judge_model_name vllm --judge_model_args model=${JUDGE_MODEL}"
+  export JUDGE_MODEL_PATH="$JUDGE_MODEL"
+fi
+# Route judge-based tasks to the local vLLM judge (some default to the OpenAI
+# backend). For an OpenAI gpt-4o judge instead, set API_TYPE=openai + GPT_API_KEY.
+# Judge-based reasoning domains need 2 GPUs (model + judge); run with --num-gpus 2.
+if [[ -n "${JUDGE_MODEL_PATH:-}" ]]; then
+  export API_TYPE="${API_TYPE:-vllm}"
+  export CHARXIV_JUDGE_TENSOR_PARALLEL_SIZE="${CHARXIV_JUDGE_TENSOR_PARALLEL_SIZE:-$NUM_GPUS}"
+fi
+
+# ── build model args ──────────────────────────────────────────────────
+MODEL_ARGS="model=${MODEL_PATH},tensor_parallel_size=${NUM_GPUS}"
+if [[ -n "$GPU_MEM_UTIL" ]]; then
+  MODEL_ARGS="${MODEL_ARGS},gpu_memory_utilization=${GPU_MEM_UTIL}"
 fi
 
 # ── run ───────────────────────────────────────────────────────────────
@@ -102,13 +126,18 @@ echo "Domain:  $DOMAIN"
 echo "Variant: $VARIANT"
 echo "Tasks:   $ALL_TASKS"
 echo "Output:  $OUTPUT_PATH"
+if [[ -n "${JUDGE_MODEL_PATH:-}" ]]; then
+  echo "Judge:   ${JUDGE_MODEL_PATH}"
+else
+  echo "Judge:   (none — judge tasks fall back to OpenAI gpt-4o; set --judge-model or JUDGE_MODEL_PATH)"
+fi
 echo ""
 
 python -m lmms_eval \
   --model vllm \
-  --model_args "model=${MODEL_PATH},tensor_parallel_size=${NUM_GPUS}" \
+  --model_args "$MODEL_ARGS" \
   --tasks "$ALL_TASKS" \
   --batch_size "$BATCH_SIZE" \
   --log_samples \
   --output_path "$OUTPUT_PATH" \
-  $JUDGE_ARGS
+  $EXTRA_ARGS

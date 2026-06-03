@@ -6,24 +6,33 @@ Vero uses **GSPO** (Group-relative Sequence Policy Optimization) with task-route
 
 ## Prerequisites
 
-- **Hardware**: 8x A100-80GB or H100-80GB GPUs (1 node)
-- **Software**: `verovlm` conda environment (see [setup_env.sh](../scripts/setup_env.sh))
+- **Hardware**: 8x A100-80GB or H100-80GB GPUs (1 node). For fewer GPUs, override `NUM_GPUS` and the per-GPU batch/rollout settings.
+- **Software**: `verovlm` conda environment (see [setup_env.sh](../scripts/setup_env.sh)). The pinned stack (PyTorch 2.10 + vLLM 0.17) targets **CUDA 13.0** (`cu130`).
 - **Data**: Training data in veRL JSONL format (see [DATA.md](DATA.md))
 
 ## Quick Start
 
 ```bash
-# 1. Set required environment variables
+# 1. Set cache paths (HF_HOME) and activate the env. The base model and the
+#    reward judge download on the fly under HF_HOME, so point it at a roomy disk.
+cp scripts/set_paths.sh.example set_paths.sh   # at the repo root; edit ROOT_PATH
+source set_paths.sh                            # sets HF_HOME and activates verovlm
+
+# 2. Set required data / output paths
 export TRAIN_FILES="/path/to/train.verl.jsonl"
 export VAL_FILES="/path/to/val.verl.jsonl"
 export ROOT_PATH="/path/to/data_root"  # for datasets and checkpoints
 
-# 2. Navigate to RL code
+# 3. Navigate to RL code
 cd vero-rl
 
-# 3. Launch training (REPO_ROOT is auto-detected)
+# 4. Launch training (REPO_ROOT is auto-detected)
 bash examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh
 ```
+
+> Using the repo-local default data? Run `python scripts/download_and_format_vero_600k.py`
+> first and you can skip `TRAIN_FILES` / `VAL_FILES` (the scripts default to
+> `${REPO_ROOT}/data/...`).
 
 ## Training Scripts
 
@@ -78,16 +87,18 @@ The training configs use the following environment variables via `${oc.env:...}`
 
 | Variable | Purpose |
 |----------|---------|
-| `TRAIN_FILES` | Path to training data JSONL |
-| `VAL_FILES` | Path to validation data JSONL |
+| `HF_HOME` | Hugging Face cache root — where the base model and reward judge download to (set via `set_paths.sh`) |
+| `TRAIN_FILES` | Path to training data JSONL (optional; defaults to `${REPO_ROOT}/data/vero_600k_train.verl.jsonl`) |
+| `VAL_FILES` | Path to validation data JSONL (optional; defaults to `${REPO_ROOT}/data/vero_600k_val.verl.jsonl`) |
 | `ROOT_PATH` | Root directory for datasets and checkpoints |
 | `REPO_ROOT` | Repository root (auto-detected by training scripts) |
+| `VLLM_JUDGE_MODEL_PATH` | Reward-judge model (optional; defaults to `Qwen/Qwen3.5-27B`, downloads on first use) |
 
 Set these before launching training:
 ```bash
-export TRAIN_FILES="/path/to/train.verl.jsonl"
-export VAL_FILES="/path/to/val.verl.jsonl"
+source set_paths.sh                    # HF_HOME + env (see Quick Start)
 export ROOT_PATH="/path/to/data_root"
+# TRAIN_FILES / VAL_FILES only if not using the repo-local default data
 ```
 
 ## Reward
@@ -115,7 +126,7 @@ The main entrypoint [`math_verify_reward_type_boxed.py`](../vero-rl/vero_reward/
 | `grounding` | [`grounding_reward.py`](../vero-rl/vero_reward/grounding_reward.py) | Hungarian matching of bounding boxes, IoU threshold 0.5 |
 | `clicking` | [`click_reward.py`](../vero-rl/vero_reward/click_reward.py) | Point-in-box check |
 | `instruction_following` | [`instructions.py`](../vero-rl/vero_reward/instructions.py) | Proportion of programmatic constraints satisfied |
-| `llm_judge` | [`vero_vllm_judge.py`](../vero-rl/verl/workers/reward_manager/vero_vllm_judge.py) | Qwen3-32B scores 1–10 via OpenAI-compatible API |
+| `llm_judge` | [`vero_vllm_judge.py`](../vero-rl/verl/workers/reward_manager/vero_vllm_judge.py) | Qwen3.5-27B scores 1–10 via OpenAI-compatible API |
 
 ### Overlong Penalty (R_overlong)
 
@@ -125,24 +136,25 @@ Linearly ramps from 0 to -1 over the final 2,048 tokens before the context limit
 
 The LLM judge runs as a vLLM server alongside training. The reward manager [`vero_vllm_judge.py`](../vero-rl/verl/workers/reward_manager/vero_vllm_judge.py) calls the judge using the prompt in [`llm_judge_reference.txt`](../vero-rl/examples/prompts/llm_judge_reference.txt).
 
-The judge server is started automatically by the training scripts via [`llm_judge_server.sh`](../vero-rl/examples/model_runs/shared/llm_judge_server.sh), which launches a local `vllm serve` process, waits for readiness, and prepares the endpoint for reward calls.
+The judge server is started automatically by the training scripts via [`llm_judge_server.sh`](../vero-rl/examples/model_runs/shared/llm_judge_server.sh), which launches a local `vllm serve` process, waits for readiness, and prepares the endpoint for reward calls. The judge model downloads on first use; override it with `export VLLM_JUDGE_MODEL_PATH=<model>`.
 
 | Parameter | Value |
 |-----------|-------|
-| Judge model | Qwen3-32B |
+| Judge model | `Qwen/Qwen3.5-27B` (override via `VLLM_JUDGE_MODEL_PATH`) |
 | Temperature | 0.7 |
 | API endpoint | `http://localhost:51001/v1` |
 | IF blend weight | configurable in `gspo_llmjudge_shared.yaml` |
 
 ## SLURM Usage
 
-The training scripts include SBATCH headers. To submit as a SLURM job:
+The run scripts execute directly with `bash` and do **not** ship cluster-specific
+`#SBATCH` headers. To submit as a SLURM job, either add your own headers at the top of
+the script (partition, account, GPUs, time) or pass them on the command line:
 
 ```bash
-sbatch examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh
+sbatch --partition=<your_partition> --gres=gpu:8 --time=24:00:00 --export=ALL \
+    examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh
 ```
-
-Edit the SBATCH headers at the top of each script to match your cluster configuration (partition, account, GPU type, etc.).
 
 ## Monitoring
 
