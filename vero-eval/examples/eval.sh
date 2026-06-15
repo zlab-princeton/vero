@@ -2,7 +2,10 @@
 # eval.sh — Run VeroEvalSuite evaluation on a single task or domain
 #
 # Usage:
-#   bash examples/eval.sh --model-path <HF_MODEL_ID_OR_PATH> --tasks <TASK_LIST>
+#   bash examples/eval.sh --tasks <TASK_LIST> [--model-path <HF_MODEL_ID_OR_PATH>]
+#
+# The model defaults to zlab-princeton/Vero-Qwen3I-8B (Vero's Qwen3-VL-8B-Instruct
+# checkpoint). Override it with --model-path.
 #
 # Examples:
 #   # Single task
@@ -46,7 +49,7 @@
 set -euo pipefail
 
 # ── defaults ──────────────────────────────────────────────────────────
-MODEL_PATH=""
+MODEL_PATH="zlab-princeton/Vero-Qwen3I-8B"   # default: Vero Qwen3-VL-8B-Instruct
 TASKS=""
 OUTPUT_PATH="./eval_results"
 BATCH_SIZE=1
@@ -69,9 +72,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$MODEL_PATH" || -z "$TASKS" ]]; then
-  echo "Usage: bash examples/eval.sh --model-path <MODEL> --tasks <TASKS>"
-  echo "  --model-path   HuggingFace model ID or local path"
+if [[ -z "$TASKS" ]]; then
+  echo "Usage: bash examples/eval.sh --tasks <TASKS> [--model-path <MODEL>]"
+  echo "  --model-path   HuggingFace model ID or local path (default: zlab-princeton/Vero-Qwen3I-8B)"
   echo "  --tasks        Comma-separated task names (e.g. countbenchqa_reasoning)"
   echo "  --output-path  Results directory (default: ./eval_results)"
   echo "  --batch-size   Batch size (default: 1)"

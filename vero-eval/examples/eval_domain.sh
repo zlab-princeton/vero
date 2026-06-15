@@ -2,7 +2,16 @@
 # eval_domain.sh — Run VeroEvalSuite by domain
 #
 # Usage:
-#   bash examples/eval_domain.sh --model-path <MODEL> --domain <DOMAIN> --variant <VARIANT>
+#   bash examples/eval_domain.sh --domain <DOMAIN> [--model-path <MODEL>] [--variant <VARIANT>]
+#
+# Defaults: --model-path zlab-princeton/Vero-Qwen3I-8B, --variant reasoning.
+# Reproduce the full suite for the default model with:
+#   bash examples/eval_domain.sh --domain all --num-gpus 2
+#
+# Pick the --variant that matches the checkpoint type (instruct vs thinking):
+#   reasoning            -> instruct checkpoints: Vero-Qwen25-7B, Vero-Qwen3I-8B
+#   reasoning_samplingq3 -> thinking checkpoints: Vero-Qwen3T-8B, Vero-MiMo-7B,
+#                           Vero-Qwen35-9B, Vero-Qwen35-9B-Base
 #
 # Examples:
 #   # Evaluate Vero model on all Chart & OCR tasks
@@ -45,9 +54,9 @@ DOMAIN_TASKS[grounding_counting_search]="countbenchqa,countqa,mme_realworld_lite
 DOMAIN_TASKS[instruction_following]="mia_bench,mm_mt_bench,mmifeval"
 
 # ── defaults ──────────────────────────────────────────────────────────
-MODEL_PATH=""
+MODEL_PATH="zlab-princeton/Vero-Qwen3I-8B"   # default: Vero Qwen3-VL-8B-Instruct
 DOMAIN=""
-VARIANT=""
+VARIANT="reasoning"                          # matches the default (instruct) model
 OUTPUT_PATH="./eval_results"
 BATCH_SIZE=1
 NUM_GPUS=1
@@ -70,11 +79,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$MODEL_PATH" || -z "$DOMAIN" || -z "$VARIANT" ]]; then
-  echo "Usage: bash examples/eval_domain.sh --model-path <MODEL> --domain <DOMAIN> --variant <VARIANT>"
+if [[ -z "$DOMAIN" ]]; then
+  echo "Usage: bash examples/eval_domain.sh --domain <DOMAIN> [--model-path <MODEL>] [--variant <VARIANT>]"
   echo ""
+  echo "Defaults: --model-path zlab-princeton/Vero-Qwen3I-8B, --variant reasoning"
   echo "Domains:  chart_ocr, stem, spatial_action, knowledge_rec, grounding_counting_search, instruction_following, all"
-  echo "Variants: reasoning, reasoning_samplingq3, qwen25_zs, qwen3_zs, qwen3_thinking_zs, gpt5nano_zs, mimo_zs"
+  echo "Variants: reasoning (instruct ckpts), reasoning_samplingq3 (thinking ckpts),"
+  echo "          qwen25_zs, qwen3_zs, qwen3_thinking_zs, gpt5nano_zs, mimo_zs"
   exit 1
 fi
 

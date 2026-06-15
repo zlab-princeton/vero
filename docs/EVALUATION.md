@@ -153,25 +153,31 @@ python -m lmms_eval \
 
 The domain evaluation script is `vero-eval/examples/eval_domain.sh`. It expands a
 `--domain` + `--variant` pair into the full task list and runs them in one
-`lmms_eval` invocation. Pass `--judge-model` for the reasoning variants (it
-exports `JUDGE_MODEL_PATH`).
+`lmms_eval` invocation. The model defaults to `zlab-princeton/Vero-Qwen3I-8B` and the
+variant to `reasoning`; the judge is read from `JUDGE_MODEL_PATH` (set by `set_paths.sh`,
+or pass `--judge-model`).
+
+**Full reproduction** — all 30 benchmarks for the default model, no `--limit`:
 
 ```bash
-# Evaluate on a single domain (reasoning domains use the judge → --num-gpus 2)
-bash examples/eval_domain.sh \
-    --model-path /path/to/model/checkpoint \
-    --domain chart_ocr \
-    --variant reasoning \
-    --judge-model Qwen/Qwen3-32B \
-    --num-gpus 2
+bash examples/eval_domain.sh --domain all --num-gpus 2
+```
 
-# Evaluate on all domains
+Pick the `--variant` that matches the checkpoint type (instruct vs thinking):
+
+| Vero checkpoint | Type | `--variant` |
+|-----------------|------|-------------|
+| `Vero-Qwen25-7B`, `Vero-Qwen3I-8B` | instruct | `reasoning` (default) |
+| `Vero-Qwen3T-8B`, `Vero-MiMo-7B`, `Vero-Qwen35-9B`, `Vero-Qwen35-9B-Base` | thinking | `reasoning_samplingq3` |
+
+```bash
+# A single domain (reasoning domains use the judge → --num-gpus 2)
+bash examples/eval_domain.sh --domain chart_ocr --variant reasoning --num-gpus 2
+
+# A thinking checkpoint over all domains
 bash examples/eval_domain.sh \
-    --model-path /path/to/model/checkpoint \
-    --domain all \
-    --variant reasoning \
-    --judge-model Qwen/Qwen3-32B \
-    --num-gpus 2
+    --model-path zlab-princeton/Vero-Qwen3T-8B \
+    --domain all --variant reasoning_samplingq3 --num-gpus 2
 ```
 
 ### Task Presets

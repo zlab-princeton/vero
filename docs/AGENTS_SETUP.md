@@ -146,27 +146,29 @@ Results (per-sample JSONL + aggregate JSON) land in `./eval_results/`.
 
 ## Step 7 — Full runs
 
+The model defaults to `zlab-princeton/Vero-Qwen3I-8B` and the judge comes from
+`JUDGE_MODEL_PATH` (set by `set_paths.sh`), so the commands stay short.
+
 ```bash
 # One full benchmark (judge task → 2 GPUs)
-bash examples/eval.sh \
-  --model-path zlab-princeton/Vero-Qwen3I-8B \
-  --tasks mathvista_testmini_reasoning \
-  --judge-model Qwen/Qwen3-32B \
-  --num-gpus 2
+bash examples/eval.sh --tasks mathvista_testmini_reasoning --num-gpus 2
 
 # A whole domain
-bash examples/eval_domain.sh \
-  --model-path zlab-princeton/Vero-Qwen3I-8B \
-  --domain chart_ocr --variant reasoning \
-  --judge-model Qwen/Qwen3-32B \
-  --num-gpus 2
+bash examples/eval_domain.sh --domain chart_ocr --variant reasoning --num-gpus 2
 
-# Everything
+# Reproduce EVERYTHING — all 30 benchmarks, no --limit
+bash examples/eval_domain.sh --domain all --num-gpus 2
+```
+
+Use the `--variant` that matches the checkpoint type — `reasoning` for instruct
+checkpoints (the default `Vero-Qwen3I-8B`), `reasoning_samplingq3` for thinking
+checkpoints (see [Task variants](#task-variants-the-suffix-on-each-task-name)). For a
+thinking checkpoint:
+
+```bash
 bash examples/eval_domain.sh \
-  --model-path zlab-princeton/Vero-Qwen3I-8B \
-  --domain all --variant reasoning \
-  --judge-model Qwen/Qwen3-32B \
-  --num-gpus 2
+  --model-path zlab-princeton/Vero-Qwen3T-8B \
+  --domain all --variant reasoning_samplingq3 --num-gpus 2
 ```
 
 ---
@@ -177,8 +179,8 @@ bash examples/eval_domain.sh \
 
 | Variant suffix | Use for |
 |----------------|---------|
-| `_reasoning` | **Vero / trained checkpoints** (Qwen2.5-VL family). Emits `<think>`/`<answer>`. |
-| `_reasoning_samplingq3` | Vero checkpoints trained on Qwen3-VL (relative 1000×1000 coords). |
+| `_reasoning` | Vero **instruct** checkpoints: `Vero-Qwen25-7B`, `Vero-Qwen3I-8B`. Emits `<think>`/`<answer>`. |
+| `_reasoning_samplingq3` | Vero **thinking** checkpoints: `Vero-Qwen3T-8B`, `Vero-MiMo-7B`, `Vero-Qwen35-9B`, `Vero-Qwen35-9B-Base`. |
 | `_qwen25_zs` | Qwen2.5-VL-Instruct zero-shot baseline. |
 | `_qwen3_zs` / `_qwen3_thinking_zs` | Qwen3-VL-Instruct / -Thinking zero-shot baselines. |
 | `_mimo_zs`, `_gpt5nano_zs` | MiMo-VL / GPT-5-nano baselines. |

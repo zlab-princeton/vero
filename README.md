@@ -29,6 +29,13 @@ The released project combines an RL training stack (`vero-rl`) and an evaluation
 
 ---
 
+## News
+
+- **2026-06-17 — Second release.** We expanded Vero with new model checkpoints and larger training data: [`Vero-Qwen35-9B`](https://huggingface.co/zlab-princeton/Vero-Qwen35-9B) and [`Vero-Qwen35-9B-Base`](https://huggingface.co/zlab-princeton/Vero-Qwen35-9B-Base), plus the [`Vero-1.6M`](https://huggingface.co/datasets/zlab-princeton/Vero-1.6M) and [`Vero-2.5M-unfiltered`](https://huggingface.co/datasets/zlab-princeton/Vero-2.5M-unfiltered) datasets.
+- **2026-06 — Oral at CVPR 2026.** Vero was selected for an oral presentation at the [DataMFM workshop](https://datamfm.github.io/) (Emerging Directions in Data for Multimodal Foundation Models) at CVPR 2026.
+
+---
+
 ## Highlights
 
 - 600K curated RL samples from 59 datasets across 6 visual reasoning task categories: STEM, Chart & OCR, Spatial & Action, Knowledge & Recognition, Grounding, Counting & Search, & Captioning & Instruction Following
@@ -80,48 +87,66 @@ vero-rl/data/vero_600k_val.verl.jsonl
 
 All bash launchers in [`vero-rl/examples/model_runs/`](vero-rl/examples/model_runs/) will pick up those files automatically once they exist.
 
-For custom data, Vero expects a [specific data format](docs/DATA.md) for RL training. 
+Larger datasets from the second release — [`zlab-princeton/Vero-1.6M`](https://huggingface.co/datasets/zlab-princeton/Vero-1.6M) and [`zlab-princeton/Vero-2.5M-unfiltered`](https://huggingface.co/datasets/zlab-princeton/Vero-2.5M-unfiltered) — are also available on the Hub; the default training setup uses `Vero-600k`.
 
-For dataset format, curation details, and reward routing metadata, see [docs/DATA.md](docs/DATA.md).
-
----
-
-## Vero Reward
-
-We open source our runtime reward stack in [`vero-rl/vero_reward`](vero-rl/vero_reward). Its main entrypoint, [`math_verify_reward_type_boxed.py`](vero-rl/vero_reward/math_verify_reward_type_boxed.py), routes scoring by `reward_type` and combines strict `<think>/<answer>` format checks with task-specific accuracy. The package covers boxed/numeric/string-match style rewards, grounding rewards based on bbox matching in [`grounding_reward.py`](vero-rl/vero_reward/grounding_reward.py), clicking rewards based on point-in-box checks in [`click_reward.py`](vero-rl/vero_reward/click_reward.py), and instruction-following checks in [`instructions.py`](vero-rl/vero_reward/instructions.py).
-
-During Vero RL training, these rule-based rewards are combined with an LLM-judge path implemented in [`vero_vllm_judge.py`](vero-rl/verl/workers/reward_manager/vero_vllm_judge.py). The shared model-run config [`gspo_llmjudge_shared.yaml`](vero-rl/examples/model_runs/config/gspo_llmjudge_shared.yaml) enables the `vero_vllm_judge` reward manager, points the custom reward function at [`vero_reward/math_verify_reward_type_boxed.py`](vero-rl/vero_reward/math_verify_reward_type_boxed.py), and configures judge parameters such as the local API endpoint, sampling settings, sleep mode, and the instruction-following blend weight.
-
-The LLM judge itself uses the prompt in [`llm_judge_reference.txt`](vero-rl/examples/prompts/llm_judge_reference.txt), which asks the judge model to compare the rollout answer against a reference answer and return a structured 1-10 score. In the standard training scripts such as [`run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh`](vero-rl/examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh), the judge server is started automatically by sourcing [`llm_judge_server.sh`](vero-rl/examples/model_runs/shared/llm_judge_server.sh), which launches a local `vllm serve` process, waits for readiness, and prepares the server for training-time reward calls.
-
-
+For custom data, Vero expects a specific data format; see [docs/DATA.md](docs/DATA.md) for the format, curation details, and reward routing metadata.
 
 ---
 
-## Model Checkpoints
+## Quick Start: Evaluation
 
-Pretrained Huggingface checkpoints are available via the following links:
+Evaluation is independent of training — to just run the benchmarks, you can skip the training setup entirely. (For the full benchmark list, see [Evaluation Benchmarks](#evaluation-benchmarks).)
 
-| Model | Base Model | Parameters | HF Link |
-|-------|------------|------------|--------------|
-| `Vero-Qwen25-7B` | Qwen2.5-VL-7B-Instruct | 7B | [zlab-princeton/Vero-Qwen25-7B](https://huggingface.co/zlab-princeton/Vero-Qwen25-7B) |
-| `Vero-Qwen3I-8B` | Qwen3-VL-8B-Instruct | 8B | [zlab-princeton/Vero-Qwen3I-8B](https://huggingface.co/zlab-princeton/Vero-Qwen3I-8B) |
-| `Vero-Qwen3T-8B` | Qwen3-VL-8B-Thinking | 8B | [zlab-princeton/Vero-Qwen3T-8B](https://huggingface.co/zlab-princeton/Vero-Qwen3T-8B) |
-| `Vero-MiMo-7B` | MiMo-VL-7B-SFT | 7B | [zlab-princeton/Vero-MiMo-7B](https://huggingface.co/zlab-princeton/Vero-MiMo-7B) |
+> **Want it hands-off?** Point an AI coding agent (Claude Code / Codex) at
+> [docs/AGENTS_SETUP.md](docs/AGENTS_SETUP.md) — a one-file runbook it (or a human) can
+> follow end to end to set up the environment and run the full reproduction.
 
-See [docs/MODELS.md](docs/MODELS.md) for the documented model families, training settings, and inference format.
+**1. One-time setup.** `set_paths.sh` configures the env, caches, and the judge
+(`JUDGE_MODEL_PATH` + `API_TYPE`), so judge-based tasks work right after sourcing:
+
+```bash
+cp scripts/set_paths.sh.example set_paths.sh   # edit ROOT_PATH (a roomy disk)
+source set_paths.sh                            # HF_HOME, caches, JUDGE_MODEL_PATH, API_TYPE
+huggingface-cli login                          # gated datasets (e.g. MMMU_Pro)
+```
+
+**2. Evaluate.** The model defaults to `zlab-princeton/Vero-Qwen3I-8B` (override with
+`--model-path`):
+
+```bash
+cd vero-eval
+
+# Smoke test — one rule-based task, 1 GPU, a few samples
+bash examples/eval.sh --tasks chartqa_reasoning --limit 5
+
+# Reproduce the FULL suite — all 30 benchmarks, no --limit (judge tasks need 2 GPUs)
+bash examples/eval_domain.sh --domain all --num-gpus 2
+```
+
+Choose the `--variant` that matches the checkpoint type (instruct vs thinking):
+
+| Vero checkpoint | Type | `--variant` |
+|-----------------|------|-------------|
+| `Vero-Qwen25-7B`, `Vero-Qwen3I-8B` | instruct | `reasoning` (default) |
+| `Vero-Qwen3T-8B`, `Vero-MiMo-7B`, `Vero-Qwen35-9B`, `Vero-Qwen35-9B-Base` | thinking | `reasoning_samplingq3` |
+
+For a thinking checkpoint, pass the model and its variant explicitly:
+
+```bash
+bash examples/eval_domain.sh \
+    --model-path zlab-princeton/Vero-Qwen3T-8B \
+    --domain all --variant reasoning_samplingq3 --num-gpus 2
+```
+
+> **Notes.** Verify a machine first with `bash examples/preflight.sh` (optional).
+> The judge comes from `JUDGE_MODEL_PATH` (set by `set_paths.sh`); if unset, judge tasks
+> fall back to OpenAI `gpt-4o` and need `GPT_API_KEY`. Judge-based tasks need 2 GPUs.
+
+See [docs/EVALUATION.md](docs/EVALUATION.md) for benchmark coverage, judge configuration, and evaluation workflows.
 
 ---
 
-### Supported Training Launch Scripts
-
-| Script | Model Family | Base Model |
-|--------|--------------|------------|
-| [Train Vero-Qwen25-7B](vero-rl/examples/model_runs/run_gspo_qwen25vl_instruct_mix_all_llmjudge.sh) | `Vero-Qwen25-7B` | Qwen2.5-VL-7B-Instruct |
-| [Train Vero-Qwen3I-8B](vero-rl/examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh) | `Vero-Qwen3I-8B` | Qwen3-VL-8B-Instruct |
-| [Train Vero-MiMo-7B](vero-rl/examples/model_runs/run_gspo_mimovl_mix_all_llmjudge.sh) | `Vero-MiMo-7B` | MiMo-VL-7B-SFT |
-
-### Quick Start
+## Quick Start: Training
 
 First set cache paths (the base model and reward judge download on the fly under `HF_HOME`) and prepare the repo-local training data:
 
@@ -149,13 +174,28 @@ export VAL_FILES="/path/to/val.verl.jsonl"
 export IMAGE_ROOT="/path/to/data_root"
 ```
 
-The training scripts auto-detect `REPO_ROOT` from their location, manage the LLM judge server automatically, and use Hydra-based configs from `vero-rl/examples/model_runs/config/`.
+See [docs/TRAINING.md](docs/TRAINING.md) for the full training guide.
 
 ---
 
-## Evaluation
+## Model Checkpoints
 
-Evaluation is independent of training — if you only want to run the benchmarks, you can skip the training setup entirely.
+Pretrained Huggingface checkpoints are available via the following links:
+
+| Model | Base Model | Parameters | HF Link |
+|-------|------------|------------|--------------|
+| `Vero-Qwen35-9B` | Qwen3.5-9B | 9B | [zlab-princeton/Vero-Qwen35-9B](https://huggingface.co/zlab-princeton/Vero-Qwen35-9B) |
+| `Vero-Qwen35-9B-Base` | Qwen3.5-9B-Base | 9B | [zlab-princeton/Vero-Qwen35-9B-Base](https://huggingface.co/zlab-princeton/Vero-Qwen35-9B-Base) |
+| `Vero-Qwen25-7B` | Qwen2.5-VL-7B-Instruct | 7B | [zlab-princeton/Vero-Qwen25-7B](https://huggingface.co/zlab-princeton/Vero-Qwen25-7B) |
+| `Vero-Qwen3I-8B` | Qwen3-VL-8B-Instruct | 8B | [zlab-princeton/Vero-Qwen3I-8B](https://huggingface.co/zlab-princeton/Vero-Qwen3I-8B) |
+| `Vero-Qwen3T-8B` | Qwen3-VL-8B-Thinking | 8B | [zlab-princeton/Vero-Qwen3T-8B](https://huggingface.co/zlab-princeton/Vero-Qwen3T-8B) |
+| `Vero-MiMo-7B` | MiMo-VL-7B-SFT | 7B | [zlab-princeton/Vero-MiMo-7B](https://huggingface.co/zlab-princeton/Vero-MiMo-7B) |
+
+See [docs/MODELS.md](docs/MODELS.md) for the documented model families, training settings, and inference format.
+
+---
+
+## Evaluation Benchmarks
 
 Vero is evaluated with `vero-eval`, an evaluation harness built on [lmms-eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) which houses VeroEvalSuite, a 30-benchmark suite spanning:
 
@@ -166,8 +206,6 @@ Vero is evaluated with `vero-eval`, an evaluation harness built on [lmms-eval](h
 - Grounding, counting, and visual search
 - Captioning and instruction following
 
-### Evaluation Benchmarks
-
 | Task Category | Benchmarks |
 |---------------|------------|
 | Chart & OCR | [ChartQA-Pro](vero-eval/lmms_eval/tasks/chartqa_pro), [ChartQA](vero-eval/lmms_eval/tasks/chartqa), [InfoVQA](vero-eval/lmms_eval/tasks/infovqa), [CharXiv](vero-eval/lmms_eval/tasks/charxiv), [ChartMuseum](vero-eval/lmms_eval/tasks/chartmuseum), [EvoChart](vero-eval/lmms_eval/tasks/evochart) |
@@ -177,50 +215,21 @@ Vero is evaluated with `vero-eval`, an evaluation harness built on [lmms-eval](h
 | Grounding, Counting & Visual Search | [CountBenchQA](vero-eval/lmms_eval/tasks/countbenchqa), [CountQA](vero-eval/lmms_eval/tasks/countqa), [MMERealWorld](vero-eval/lmms_eval/tasks/mme_realworld), [VStarBench](vero-eval/lmms_eval/tasks/vstar_bench), [AerialVG](vero-eval/lmms_eval/tasks/aerialvg), [VisualProbe](vero-eval/lmms_eval/tasks/visual_probe), [ScreenSpot](vero-eval/lmms_eval/tasks/screenspot_point_in_box), [ScreenSpotPro](vero-eval/lmms_eval/tasks/screenspotpro) |
 | Captioning & Instruction Following | [MM-MTBench](vero-eval/lmms_eval/tasks/mm_mt_bench), [MIABench](vero-eval/lmms_eval/tasks/mia_bench), [MMIFEval](vero-eval/lmms_eval/tasks/mmifeval) |
 
-### Quick Start
+---
 
-First set your cache paths and Hugging Face login (datasets and models download
-on the fly under `HF_HOME`), then verify the machine is ready:
+## Training
 
-```bash
-cp scripts/set_paths.sh.example set_paths.sh   # edit ROOT_PATH (a roomy disk)
-source set_paths.sh                            # sets HF_HOME, caches, JUDGE_MODEL_PATH
-huggingface-cli login                          # gated datasets (e.g. MMMU_Pro)
+GSPO-based RL launch scripts for each base model:
 
-cd vero-eval
-bash examples/preflight.sh --download-judge    # check env/GPU/login + pre-fetch judge
-```
+| Script | Model Family | Base Model |
+|--------|--------------|------------|
+| [Train Vero-Qwen25-7B](vero-rl/examples/model_runs/run_gspo_qwen25vl_instruct_mix_all_llmjudge.sh) | `Vero-Qwen25-7B` | Qwen2.5-VL-7B-Instruct |
+| [Train Vero-Qwen3I-8B](vero-rl/examples/model_runs/run_gspo_qwen3vl_instruct_mix_all_llmjudge.sh) | `Vero-Qwen3I-8B` | Qwen3-VL-8B-Instruct |
+| [Train Vero-MiMo-7B](vero-rl/examples/model_runs/run_gspo_mimovl_mix_all_llmjudge.sh) | `Vero-MiMo-7B` | MiMo-VL-7B-SFT |
 
-Then run an evaluation:
+During RL, Vero scores rollouts with task-routed rule-based rewards plus an LLM judge — see [Reward](docs/TRAINING.md#reward) for the formula, verifiers, and judge setup.
 
-```bash
-cd vero-eval
-
-# Single task (rule-based, no judge needed); --limit for a quick smoke test
-bash examples/eval.sh \
-    --model-path zlab-princeton/Vero-Qwen3I-8B \
-    --tasks chartqa_reasoning \
-    --limit 5
-
-# A full domain. Reasoning variants need a judge (pass it with --judge-model);
-# judge-based tasks need 2 GPUs — one for the model, one for the judge.
-bash examples/eval_domain.sh \
-    --model-path zlab-princeton/Vero-Qwen3I-8B \
-    --domain chart_ocr \
-    --variant reasoning \
-    --judge-model Qwen/Qwen3-32B \
-    --num-gpus 2
-```
-
-> The judge is selected by the `JUDGE_MODEL_PATH` env var (which `--judge-model`
-> sets). If left unset, judge-based tasks fall back to OpenAI `gpt-4o` and need
-> `GPT_API_KEY`. Judge tasks require 2 GPUs. See
-> [docs/EVALUATION.md](docs/EVALUATION.md#judge-setup).
-
-**Setting up with an AI coding agent?** [docs/AGENTS_SETUP.md](docs/AGENTS_SETUP.md)
-is a one-file runbook a Claude Code / Codex agent (or a human) can follow end to end.
-
-See [docs/EVALUATION.md](docs/EVALUATION.md) for benchmark coverage, judge configuration, and evaluation workflows.
+The training scripts auto-detect `REPO_ROOT` from their location, manage the LLM judge server automatically, and use Hydra-based configs from `vero-rl/examples/model_runs/config/`. See [docs/TRAINING.md](docs/TRAINING.md) for the full training guide.
 
 ---
 
