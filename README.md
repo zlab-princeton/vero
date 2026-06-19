@@ -31,6 +31,7 @@ The released project combines an RL training stack (`vero-rl`) and an evaluation
 
 ## News
 
+- **2026-06 — Vero accepted at ECCV 2026.**
 - **2026-06-17 — Second release.** We expanded Vero with new model checkpoints and larger training data: [`Vero-Qwen35-9B`](https://huggingface.co/zlab-princeton/Vero-Qwen35-9B) and [`Vero-Qwen35-9B-Base`](https://huggingface.co/zlab-princeton/Vero-Qwen35-9B-Base), plus the [`Vero-1.6M`](https://huggingface.co/datasets/zlab-princeton/Vero-1.6M) and [`Vero-2.5M-unfiltered`](https://huggingface.co/datasets/zlab-princeton/Vero-2.5M-unfiltered) datasets.
 - **2026-06 — Oral at CVPR 2026.** Vero was selected for an oral presentation at the [DataMFM workshop](https://datamfm.github.io/) (Emerging Directions in Data for Multimodal Foundation Models) at CVPR 2026.
 
