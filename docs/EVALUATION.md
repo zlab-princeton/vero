@@ -8,7 +8,7 @@ Vero is evaluated on **VeroEvalSuite**, a comprehensive benchmark of **30 divers
 
 ## Environment & Data Setup
 
-Before running any benchmark you need (1) the `verovlm` environment, (2) Hugging Face cache paths on a roomy disk, (3) an HF login for gated datasets, and (4) an LLM judge for the reasoning variants.
+Before running any benchmark you need (1) the `verovlm` environment, (2) Hugging Face cache paths on a roomy disk, (3) an HF login for gated datasets, and (4) an LLM judge — but only for the judge-based tasks (11 of the 30 benchmarks; see the **LLM Judge** column in the tables below).
 
 ### 1. Install the environment
 
@@ -42,7 +42,7 @@ huggingface-cli login        # or: export HF_TOKEN=hf_xxx
 
 ### 4. Pick (and optionally pre-download) the judge
 
-The reasoning variants extract the final answer with a local **LLM judge** (see [Judge Setup](#judge-setup)). Set `JUDGE_MODEL_PATH` to a local directory or an HF id; it downloads on first use. `set_paths.sh` defaults it to `Qwen/Qwen3-32B`.
+The judge-based reasoning tasks use a local **LLM judge** to extract and/or grade the final answer (see [Judge Setup](#judge-setup)). Set `JUDGE_MODEL_PATH` to a local directory or an HF id; it downloads on first use. `set_paths.sh` defaults it to `Qwen/Qwen3-32B`. Rule-based tasks never touch the judge, so you can skip this step if you only run those.
 
 ### 5. Preflight (recommended)
 
@@ -56,61 +56,66 @@ bash examples/preflight.sh --download-judge # also pre-downloads the judge
 
 ## VeroEvalSuite Benchmarks
 
+**LLM Judge column legend:**
+- **No** — fully rule-based scoring: the final answer is parsed from `<answer>…</answer>` / `\boxed{…}` and compared programmatically. No judge, runs on **1 GPU**.
+- **Yes** — an **LLM judge** extracts and/or grades the final answer. Needs `JUDGE_MODEL_PATH` and **2 GPUs** (model + judge) — see [Judge Setup](#judge-setup).
+- **Yes (VLM-capable)** — same as **Yes**, and the judge additionally receives the image when `JUDGE_MODEL_PATH` points at a vision-language model — see [VLM (image-aware) judge](#vlm-image-aware-judge).
+
 ### Chart & OCR (6 benchmarks)
-| Benchmark | Task Name | Dataset |
-|-----------|-----------|---------|
-| ChartQA | `chartqa_reasoning` | [`lmms-lab/ChartQA`](https://huggingface.co/datasets/lmms-lab/ChartQA) |
-| ChartQA-Pro | `chartqa_pro_reasoning` | [`ahmed-masry/ChartQAPro`](https://huggingface.co/datasets/ahmed-masry/ChartQAPro) |
-| InfoVQA | `infovqa_val_reasoning` | [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA) |
-| CharXiv | `charxiv_reasoning` | [`princeton-nlp/CharXiv`](https://huggingface.co/datasets/princeton-nlp/CharXiv) |
-| ChartMuseum | `chartmuseum_reasoning` | [`gsarch/ChartMuseum`](https://huggingface.co/datasets/gsarch/ChartMuseum) |
-| EvoChart | `evochart_reasoning` | [`gsarch/EvoChart-QA`](https://huggingface.co/datasets/gsarch/EvoChart-QA) |
+| Benchmark | Task Name | Dataset | LLM Judge |
+|-----------|-----------|---------|-----------|
+| ChartQA | `chartqa_reasoning` | [`lmms-lab/ChartQA`](https://huggingface.co/datasets/lmms-lab/ChartQA) | No |
+| ChartQA-Pro | `chartqa_pro_reasoning` | [`ahmed-masry/ChartQAPro`](https://huggingface.co/datasets/ahmed-masry/ChartQAPro) | No |
+| InfoVQA | `infovqa_val_reasoning` | [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA) | No |
+| CharXiv | `charxiv_reasoning` | [`princeton-nlp/CharXiv`](https://huggingface.co/datasets/princeton-nlp/CharXiv) | Yes |
+| ChartMuseum | `chartmuseum_reasoning` | [`gsarch/ChartMuseum`](https://huggingface.co/datasets/gsarch/ChartMuseum) | Yes |
+| EvoChart | `evochart_reasoning` | [`gsarch/EvoChart-QA`](https://huggingface.co/datasets/gsarch/EvoChart-QA) | No |
 
 ### STEM (4 benchmarks)
-| Benchmark | Task Name | Dataset |
-|-----------|-----------|---------|
-| MMMU-PRO Standard | `mmmu_pro_standard_reasoning` | [`MMMU/MMMU_Pro`](https://huggingface.co/datasets/MMMU/MMMU_Pro) |
-| MMMU-PRO Vision | `mmmu_pro_vision_reasoning` | [`MMMU/MMMU_Pro`](https://huggingface.co/datasets/MMMU/MMMU_Pro) |
-| MathVision | `mathvision_test_reasoning` | [`MathLLMs/MathVision`](https://huggingface.co/datasets/MathLLMs/MathVision) |
-| MathVista | `mathvista_testmini_reasoning` | [`AI4Math/MathVista`](https://huggingface.co/datasets/AI4Math/MathVista) |
+| Benchmark | Task Name | Dataset | LLM Judge |
+|-----------|-----------|---------|-----------|
+| MMMU-PRO Standard | `mmmu_pro_standard_reasoning` | [`MMMU/MMMU_Pro`](https://huggingface.co/datasets/MMMU/MMMU_Pro) | No |
+| MMMU-PRO Vision | `mmmu_pro_vision_reasoning` | [`MMMU/MMMU_Pro`](https://huggingface.co/datasets/MMMU/MMMU_Pro) | No |
+| MathVision | `mathvision_test_reasoning` | [`MathLLMs/MathVision`](https://huggingface.co/datasets/MathLLMs/MathVision) | Yes |
+| MathVista | `mathvista_testmini_reasoning` | [`AI4Math/MathVista`](https://huggingface.co/datasets/AI4Math/MathVista) | Yes |
 
 ### Spatial & Action (5 benchmarks)
-| Benchmark | Task Name | Dataset |
-|-----------|-----------|---------|
-| CVBench | `cv_bench_reasoning` | [`nyu-visionx/CV-Bench`](https://huggingface.co/datasets/nyu-visionx/CV-Bench) |
-| EmbSpatial | `embspatial_reasoning` | [`FlagEval/EmbSpatial-Bench`](https://huggingface.co/datasets/FlagEval/EmbSpatial-Bench) |
-| ERQA | `erqa_reasoning` | [`FlagEval/ERQA`](https://huggingface.co/datasets/FlagEval/ERQA) |
-| GameQA-Lite | `game_qa_lite_reasoning` | [`gsarch/Game-QA-Lite`](https://huggingface.co/datasets/gsarch/Game-QA-Lite) |
-| Blink | `blink_reasoning` | [`BLINK-Benchmark/BLINK`](https://huggingface.co/datasets/BLINK-Benchmark/BLINK) |
+| Benchmark | Task Name | Dataset | LLM Judge |
+|-----------|-----------|---------|-----------|
+| CVBench | `cv_bench_reasoning` | [`nyu-visionx/CV-Bench`](https://huggingface.co/datasets/nyu-visionx/CV-Bench) | No |
+| EmbSpatial | `embspatial_reasoning` | [`FlagEval/EmbSpatial-Bench`](https://huggingface.co/datasets/FlagEval/EmbSpatial-Bench) | No |
+| ERQA | `erqa_reasoning` | [`FlagEval/ERQA`](https://huggingface.co/datasets/FlagEval/ERQA) | No |
+| GameQA-Lite | `game_qa_lite_reasoning` | [`gsarch/Game-QA-Lite`](https://huggingface.co/datasets/gsarch/Game-QA-Lite) | No |
+| Blink | `blink_reasoning` | [`BLINK-Benchmark/BLINK`](https://huggingface.co/datasets/BLINK-Benchmark/BLINK) | No |
 
 ### Knowledge & Recognition (4 benchmarks)
-| Benchmark | Task Name | Dataset |
-|-----------|-----------|---------|
-| RealWorldQA | `realworldqa_reasoning` | [`lmms-lab/RealWorldQA`](https://huggingface.co/datasets/lmms-lab/RealWorldQA) |
-| SimpleVQA (English) | `simplevqa_en_reasoning` | [`gsarch/SimpleVQA-EN`](https://huggingface.co/datasets/gsarch/SimpleVQA-EN) |
-| FVQA | `fvqa_reasoning` | [`lmms-lab/FVQA`](https://huggingface.co/datasets/lmms-lab/FVQA) |
-| MM-Vet V2 | `mmvetv2_group_img_reasoning` | [`whyu/mm-vet-v2`](https://huggingface.co/datasets/whyu/mm-vet-v2) |
+| Benchmark | Task Name | Dataset | LLM Judge |
+|-----------|-----------|---------|-----------|
+| RealWorldQA | `realworldqa_reasoning` | [`lmms-lab/RealWorldQA`](https://huggingface.co/datasets/lmms-lab/RealWorldQA) | No |
+| SimpleVQA (English) | `simplevqa_en_reasoning` | [`gsarch/SimpleVQA-EN`](https://huggingface.co/datasets/gsarch/SimpleVQA-EN) | Yes |
+| FVQA | `fvqa_reasoning` | [`lmms-lab/FVQA`](https://huggingface.co/datasets/lmms-lab/FVQA) | Yes |
+| MM-Vet V2 | `mmvetv2_group_img_reasoning` | [`whyu/mm-vet-v2`](https://huggingface.co/datasets/whyu/mm-vet-v2) | Yes |
 
 ### Grounding, Counting & Visual Search (8 benchmarks — VisualProbe is split into 3 difficulty levels)
-| Benchmark | Task Name | Dataset |
-|-----------|-----------|---------|
-| CountBenchQA | `countbenchqa_reasoning` | [`vikhyatk/CountBenchQA`](https://huggingface.co/datasets/vikhyatk/CountBenchQA) |
-| CountQA | `countqa_reasoning` | [`Jayant-Sravan/CountQA`](https://huggingface.co/datasets/Jayant-Sravan/CountQA) |
-| MME-RealWorld-Lite | `mme_realworld_lite_reasoning` | [`yifanzhang114/MME-RealWorld-lite-lmms-eval`](https://huggingface.co/datasets/yifanzhang114/MME-RealWorld-lite-lmms-eval) |
-| V*Bench | `vstar_bench_reasoning` | [`lmms-lab/vstar-bench`](https://huggingface.co/datasets/lmms-lab/vstar-bench) |
-| AerialVG | `aerialvg_bbox_reasoning` | [`IPEC-COMMUNITY/AerialVG`](https://huggingface.co/datasets/IPEC-COMMUNITY/AerialVG) |
-| VisualProbe (Easy) | `visual_probe_easy_reasoning` | [`Mini-o3/VisualProbe_Easy`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Easy) |
-| VisualProbe (Medium) | `visual_probe_medium_reasoning` | [`Mini-o3/VisualProbe_Medium`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Medium) |
-| VisualProbe (Hard) | `visual_probe_hard_reasoning` | [`Mini-o3/VisualProbe_Hard`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Hard) |
-| ScreenSpot | `screenspot_point_in_box_reasoning` | [`rootsautomation/ScreenSpot`](https://huggingface.co/datasets/rootsautomation/ScreenSpot) |
-| ScreenSpotPro | `screenspotpro_point_in_box_reasoning` | [`likaixin/ScreenSpot-Pro`](https://huggingface.co/datasets/likaixin/ScreenSpot-Pro) |
+| Benchmark | Task Name | Dataset | LLM Judge |
+|-----------|-----------|---------|-----------|
+| CountBenchQA | `countbenchqa_reasoning` | [`vikhyatk/CountBenchQA`](https://huggingface.co/datasets/vikhyatk/CountBenchQA) | No |
+| CountQA | `countqa_reasoning` | [`Jayant-Sravan/CountQA`](https://huggingface.co/datasets/Jayant-Sravan/CountQA) | No |
+| MME-RealWorld-Lite | `mme_realworld_lite_reasoning` | [`yifanzhang114/MME-RealWorld-lite-lmms-eval`](https://huggingface.co/datasets/yifanzhang114/MME-RealWorld-lite-lmms-eval) | No |
+| V*Bench | `vstar_bench_reasoning` | [`lmms-lab/vstar-bench`](https://huggingface.co/datasets/lmms-lab/vstar-bench) | No |
+| AerialVG | `aerialvg_bbox_reasoning` | [`IPEC-COMMUNITY/AerialVG`](https://huggingface.co/datasets/IPEC-COMMUNITY/AerialVG) | No |
+| VisualProbe (Easy) | `visual_probe_easy_reasoning` | [`Mini-o3/VisualProbe_Easy`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Easy) | Yes |
+| VisualProbe (Medium) | `visual_probe_medium_reasoning` | [`Mini-o3/VisualProbe_Medium`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Medium) | Yes |
+| VisualProbe (Hard) | `visual_probe_hard_reasoning` | [`Mini-o3/VisualProbe_Hard`](https://huggingface.co/datasets/Mini-o3/VisualProbe_Hard) | Yes |
+| ScreenSpot | `screenspot_point_in_box_reasoning` | [`rootsautomation/ScreenSpot`](https://huggingface.co/datasets/rootsautomation/ScreenSpot) | No |
+| ScreenSpotPro | `screenspotpro_point_in_box_reasoning` | [`likaixin/ScreenSpot-Pro`](https://huggingface.co/datasets/likaixin/ScreenSpot-Pro) | No |
 
 ### Captioning & Instruction Following (3 benchmarks)
-| Benchmark | Task Name | Dataset |
-|-----------|-----------|---------|
-| MM-MTBench | `mm_mt_bench_reasoning` | [`mistralai/MM-MT-Bench`](https://huggingface.co/datasets/mistralai/MM-MT-Bench) |
-| MIABench | `mia_bench_reasoning` | [`lmms-lab/MIA-Bench`](https://huggingface.co/datasets/lmms-lab/MIA-Bench) |
-| MMIFEval | `mmifeval_reasoning` | [`lscpku/MMIFEval`](https://huggingface.co/datasets/lscpku/MMIFEval) |
+| Benchmark | Task Name | Dataset | LLM Judge |
+|-----------|-----------|---------|-----------|
+| MM-MTBench | `mm_mt_bench_reasoning` | [`mistralai/MM-MT-Bench`](https://huggingface.co/datasets/mistralai/MM-MT-Bench) | Yes (VLM-capable) |
+| MIABench | `mia_bench_reasoning` | [`lmms-lab/MIA-Bench`](https://huggingface.co/datasets/lmms-lab/MIA-Bench) | Yes (VLM-capable) |
+| MMIFEval | `mmifeval_reasoning` | [`lscpku/MMIFEval`](https://huggingface.co/datasets/lscpku/MMIFEval) | Yes (VLM-capable) |
 
 ## Quick Start
 
@@ -229,8 +234,24 @@ The Vero system prompt (which defines the `<think>` / `<answer>` output format) 
 
 Vero models generate reasoning traces in `<think>` tags. Tasks fall into two groups:
 
-- **Rule-based extraction** (no judge): the final answer is parsed from `<answer>…</answer>` / `\boxed{…}` — e.g. `chartqa_reasoning`, the ScreenSpot point/bbox tasks.
-- **Judge-based extraction** (needs a judge): an **LLM judge** reads the trace and scores or extracts the answer — `mathvista`, `mathvision`, `mmvetv2`, `mm_mt_bench`, `mia_bench`, `mmifeval`, `fvqa`, `simplevqa`, `charxiv`, `chartmuseum`, `visual_probe`.
+- **Rule-based scoring** (no judge, 19 of 30 benchmarks): the final answer is parsed from `<answer>…</answer>` / `\boxed{…}` and compared programmatically — e.g. `chartqa_reasoning`, the ScreenSpot point/bbox tasks. See the **LLM Judge = No** rows in the benchmark tables above.
+- **Judge-based scoring** (needs a judge, 11 of 30 benchmarks): an **LLM judge** reads the response and extracts and/or grades the final answer. What the judge does varies by task:
+
+| Task | Judge role |
+|------|-----------|
+| `mathvista_testmini_reasoning` | Extracts the final answer from the response; comparison to ground truth is then rule-based |
+| `mathvision_test_reasoning` | Grades the answer against ground truth (binary 0/1) |
+| `charxiv_reasoning` | Extracts the final answer and grades it in one call |
+| `chartmuseum_reasoning` | Grades the answer against ground truth (correct/incorrect) |
+| `fvqa_reasoning` | Grades the answer against the reference and candidate answers (correct/incorrect) |
+| `simplevqa_en_reasoning` | Grades the answer against candidate answers (correct/incorrect) |
+| `mmvetv2_group_img_reasoning` | Assigns a numeric score following the official MM-Vet grading protocol |
+| `visual_probe_{easy,medium,hard}_reasoning` | Grades the answer against the reference (correct/incorrect) |
+| `mm_mt_bench_reasoning` | Rates response quality 1–10 following the official protocol (**VLM-capable**) |
+| `mia_bench_reasoning` | Scores instruction adherence per instruction (**VLM-capable**) |
+| `mmifeval_reasoning` | Hybrid: rule-based constraint checks plus judge calls for constraints that need semantic/visual verification (**VLM-capable**) |
+
+**VLM-capable** means the judge also receives the image when the configured judge is a vision-language model — see [VLM (image-aware) judge](#vlm-image-aware-judge) below.
 
 ### Judge Setup
 
@@ -256,7 +277,25 @@ export CHARXIV_JUDGE_TENSOR_PARALLEL_SIZE=2     # judge GPUs (defaults to --num-
 export CHARXIV_JUDGE_MAX_MODEL_LEN=18384        # cap judge context
 ```
 
-**Server mode (optional).** To run the judge as a standalone OpenAI-compatible vLLM server instead of in-process (e.g. to pin it to dedicated GPUs), launch `vllm serve <judge>` yourself and set:
+### VLM (image-aware) judge
+
+Three tasks — `mm_mt_bench_reasoning`, `mia_bench_reasoning`, and `mmifeval_reasoning` — can send the **image along with the text** to the judge, so grading also accounts for visual content. The mode is picked automatically from the judge model name: if `JUDGE_MODEL_PATH` looks like a vision-language model (e.g. contains `qwen3-vl`, `qwen2.5-vl`, …) these tasks run the judge in image+text mode; otherwise they fall back to text-only judging. All other judge tasks are text-only regardless of the judge model.
+
+```bash
+# Text-only LLM judging for all judge tasks (the default):
+export JUDGE_MODEL_PATH=Qwen/Qwen3-32B
+
+# Image-aware judging for mm_mt_bench / mia_bench / mmifeval (paper protocol):
+export JUDGE_MODEL_PATH=Qwen/Qwen3-VL-32B-Instruct
+```
+
+To force a mode regardless of the model name, set `LMMS_EVAL_JUDGE_MODE=vlm` or `LMMS_EVAL_JUDGE_MODE=llm`.
+
+> **Reproducing the paper's numbers:** the paper uses **Qwen3-32B** (thinking disabled) as the LLM judge for all text-only judge tasks and **Qwen3-VL-32B-Instruct** as the VLM judge for `mm_mt_bench`, `mia_bench`, and `mmifeval`. With the default `Qwen/Qwen3-32B` those three tasks still run, but judge text-only — convenient for quick runs, not identical to the paper protocol.
+
+### Judge server mode (optional)
+
+To run the judge as a standalone OpenAI-compatible vLLM server instead of in-process (e.g. to pin it to dedicated GPUs), launch `vllm serve <judge>` yourself and set:
 
 ```bash
 export VLLM_SERVER_JUDGE=1
